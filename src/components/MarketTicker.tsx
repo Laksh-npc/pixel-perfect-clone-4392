@@ -10,7 +10,7 @@ const MarketTicker = () => {
   ];
 
   return (
-    <div className="backdrop-blur-xl bg-gradient-to-r from-blue-500/10 via-cyan-400/10 to-purple-500/10 border-b px-6 py-2 overflow-x-auto">
+    <div className="bg-secondary/50 border-b px-6 py-2 overflow-x-auto">
       <div className="flex items-center gap-8 min-w-max">
         {indices.map((index) => (
           <div key={index.name} className="flex items-center gap-2">
