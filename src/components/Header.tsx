@@ -4,7 +4,7 @@ import { Input } from "./ui/input";
 
 const Header = () => {
   return (
-    <header className="border-b bg-background sticky top-0 z-50">
+    <header className="border-b backdrop-blur-xl bg-gradient-to-r from-blue-500/10 via-cyan-400/10 to-purple-500/10 sticky top-0 z-50">
       <div className="flex items-center justify-between px-6 py-3">
         <div className="flex items-center gap-8">
           <div className="flex items-center gap-2">
