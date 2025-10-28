@@ -1,10 +1,26 @@
 import { Search, Bell, Globe } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+import { useState, useEffect } from "react";
 
 const Header = () => {
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   return (
-    <header className="border-b bg-background sticky top-0 z-50">
+    <header className={`border-b sticky top-0 z-50 transition-all duration-300 ${
+      isScrolled 
+        ? 'bg-background/80 backdrop-blur-xl shadow-sm' 
+        : 'bg-background'
+    }`}>
       <div className="flex items-center justify-between px-6 py-3">
         <div className="flex items-center gap-8">
           <div className="flex items-center gap-2">
