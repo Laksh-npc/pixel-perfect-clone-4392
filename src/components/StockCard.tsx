@@ -1,0 +1,35 @@
+import { Bookmark } from "lucide-react";
+
+interface StockCardProps {
+  logo: string;
+  name: string;
+  price: string;
+  change: string;
+  percent: string;
+  positive: boolean;
+  showBookmark?: boolean;
+}
+
+const StockCard = ({ logo, name, price, change, percent, positive, showBookmark }: StockCardProps) => {
+  return (
+    <div className="border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer bg-card relative">
+      {showBookmark && (
+        <button className="absolute top-4 right-4 text-muted-foreground hover:text-foreground">
+          <Bookmark className="w-4 h-4" />
+        </button>
+      )}
+      <div className="flex items-center gap-3 mb-3">
+        <div className="w-12 h-12 rounded bg-secondary flex items-center justify-center font-bold text-lg">
+          {logo}
+        </div>
+      </div>
+      <div className="text-sm font-medium mb-2">{name}</div>
+      <div className="text-lg font-semibold mb-1">{price}</div>
+      <div className={`text-sm ${positive ? 'text-success' : 'text-destructive'}`}>
+        {change} {percent}
+      </div>
+    </div>
+  );
+};
+
+export default StockCard;
