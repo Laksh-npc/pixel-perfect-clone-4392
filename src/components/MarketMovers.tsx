@@ -1,15 +1,71 @@
 import { ChevronDown, ArrowUpDown, Bookmark } from "lucide-react";
 import { Button } from "./ui/button";
+import { useEffect, useMemo, useState } from "react";
+import { api } from "@/services/api";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+type TabKey = "GAINERS" | "LOSERS" | "VOLUME";
 
 const MarketMovers = () => {
-  const stocks = [
-    { name: "Jindal Steel", logo: "🏭", price: "₹1,073.50", change: "39.20", percent: "(3.79%)", positive: true, volume: "44,45,977" },
-    { name: "JSW Steel", logo: "🏗️", price: "₹1,184.20", change: "33.60", percent: "(2.92%)", positive: true, volume: "" },
-    { name: "Tata Steel", logo: "⚙️", price: "₹181.81", change: "5.15", percent: "(2.92%)", positive: true, volume: "5,95,11,794" },
-    { name: "SBI Life Insurance", logo: "🏦", price: "₹1,936.80", change: "33.70", percent: "(1.77%)", positive: true, volume: "21,66,517" },
-    { name: "ICICI Lombard Gen.", logo: "🔴", price: "₹2,019.00", change: "32.60", percent: "(1.64%)", positive: true, volume: "8,03,330" },
-    { name: "Info Edge (India)", logo: "📰", price: "₹1,385.70", change: "21.00", percent: "(1.54%)", positive: true, volume: "14,12,055" },
-  ];
+  const [tab, setTab] = useState<TabKey>("GAINERS");
+  const [gainers, setGainers] = useState<any[]>([]);
+  const [losers, setLosers] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [universe, setUniverse] = useState<string>("NIFTY 100");
+
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const [g, l] = await Promise.allSettled([
+          api.getTopGainers(),
+          api.getTopLosers(),
+        ]);
+
+        if (g.status === "fulfilled") {
+          const list = Array.isArray(g.value) ? g.value : Array.isArray((g.value as any)?.data) ? (g.value as any).data : [];
+          const mapped = list.map((it: any) => normalizeMover(it, true));
+          if (isMounted) setGainers(mapped);
+        }
+        if (l.status === "fulfilled") {
+          const list = Array.isArray(l.value) ? l.value : Array.isArray((l.value as any)?.data) ? (l.value as any).data : [];
+          const mapped = list.map((it: any) => normalizeMover(it, false));
+          if (isMounted) setLosers(mapped);
+        }
+      } catch (e: any) {
+        if (isMounted) setError(e?.message || "Failed to load movers");
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const stocks = useMemo(() => (tab === "GAINERS" ? gainers : tab === "LOSERS" ? losers : gainers), [tab, gainers, losers]);
+
+  function normalizeMover(it: any, positiveDefault: boolean) {
+    const symbol = it.symbol || it.companyName || it.tradingsymbol || it.name || "-";
+    const last = it.lastPrice || it.ltp || it.price || 0;
+    const change = it.netPrice || it.change || it.variation || 0; // percent or absolute depending on API
+    const absolute = it.netChange || it.absoluteChange || it.changeAbs || 0;
+    const volume = it.tradedQuantity || it.volume || "";
+    const positive = Number(absolute || change) >= 0 ? true : positiveDefault;
+    return {
+      name: String(symbol),
+      logo: symbol?.[0] || "•",
+      price: typeof last === "number" ? `₹${last.toLocaleString("en-IN", { maximumFractionDigits: 2 })}` : String(last),
+      change: typeof absolute === "number" ? absolute.toFixed(2) : String(absolute || ""),
+      percent: `(${typeof change === "number" ? change.toFixed(2) : String(change)}%)`,
+      positive,
+      volume: typeof volume === "number" ? volume.toLocaleString("en-IN") : String(volume),
+    };
+  }
 
   return (
     <div className="border rounded-lg p-6 bg-card">
@@ -19,19 +75,72 @@ const MarketMovers = () => {
       
       <div className="flex items-center gap-4 mb-4">
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="rounded-full">
+          <Button variant={tab === "GAINERS" ? "outline" : "ghost"} size="sm" className="rounded-full" onClick={() => setTab("GAINERS")}>
             Gainers
           </Button>
-          <Button variant="ghost" size="sm">
+          <Button variant={tab === "LOSERS" ? "outline" : "ghost"} size="sm" onClick={() => setTab("LOSERS")}>
             Losers
           </Button>
-          <Button variant="ghost" size="sm">
+          <Button variant={tab === "VOLUME" ? "outline" : "ghost"} size="sm" onClick={() => setTab("VOLUME")}>
             Volume shockers
           </Button>
         </div>
-        <Button variant="outline" size="sm" className="ml-auto">
-          NIFTY 100 <ChevronDown className="w-4 h-4 ml-2" />
-        </Button>
+        <div className="ml-auto w-[160px]">
+          <Select value={universe} onValueChange={setUniverse}>
+            <SelectTrigger className="h-8 text-sm">
+              <SelectValue placeholder="NIFTY 100" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="NIFTY 100" className="group">
+                  <div className="flex items-center gap-3">
+                    <span className="relative inline-flex h-5 w-5 items-center justify-center">
+                      <span className="h-4 w-4 rounded-full border-2 border-emerald-500"></span>
+                      <span className="absolute h-2.5 w-2.5 rounded-full bg-emerald-500 opacity-0 group-data-[state=checked]:opacity-100 transition-opacity"></span>
+                    </span>
+                    <span>NIFTY 100</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="NIFTY 500" className="group">
+                  <div className="flex items-center gap-3">
+                    <span className="relative inline-flex h-5 w-5 items-center justify-center">
+                      <span className="h-4 w-4 rounded-full border-2 border-emerald-500"></span>
+                      <span className="absolute h-2.5 w-2.5 rounded-full bg-emerald-500 opacity-0 group-data-[state=checked]:opacity-100 transition-opacity"></span>
+                    </span>
+                    <span>NIFTY 500</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="NIFTY Midcap 100" className="group">
+                  <div className="flex items-center gap-3">
+                    <span className="relative inline-flex h-5 w-5 items-center justify-center">
+                      <span className="h-4 w-4 rounded-full border-2 border-emerald-500"></span>
+                      <span className="absolute h-2.5 w-2.5 rounded-full bg-emerald-500 opacity-0 group-data-[state=checked]:opacity-100 transition-opacity"></span>
+                    </span>
+                    <span>NIFTY Midcap 100</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="NIFTY Smallcap 100" className="group">
+                  <div className="flex items-center gap-3">
+                    <span className="relative inline-flex h-5 w-5 items-center justify-center">
+                      <span className="h-4 w-4 rounded-full border-2 border-emerald-500"></span>
+                      <span className="absolute h-2.5 w-2.5 rounded-full bg-emerald-500 opacity-0 group-data-[state=checked]:opacity-100 transition-opacity"></span>
+                    </span>
+                    <span>NIFTY Smallcap 100</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="Nifty Total Market" className="group">
+                  <div className="flex items-center gap-3">
+                    <span className="relative inline-flex h-5 w-5 items-center justify-center">
+                      <span className="h-4 w-4 rounded-full border-2 border-emerald-500"></span>
+                      <span className="absolute h-2.5 w-2.5 rounded-full bg-emerald-500 opacity-0 group-data-[state=checked]:opacity-100 transition-opacity"></span>
+                    </span>
+                    <span>Nifty Total Market</span>
+                  </div>
+                </SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="overflow-x-auto">
@@ -45,11 +154,24 @@ const MarketMovers = () => {
             </tr>
           </thead>
           <tbody>
-            {stocks.map((stock, index) => (
+            {loading && (
+              <tr>
+                <td className="py-4" colSpan={4}>
+                  <div className="flex items-center gap-4">
+                    <Skeleton className="h-4 w-28" />
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-4 w-20" />
+                  </div>
+                </td>
+              </tr>
+            )}
+            {!loading && !error && stocks.map((stock, index) => (
               <tr key={index} className="border-b last:border-b-0 hover:bg-secondary/30 cursor-pointer">
                 <td className="py-4">
                   <div className="flex items-center gap-3">
-                    <div className="text-2xl">{stock.logo}</div>
+                    <div className="w-8 h-8 rounded bg-secondary flex items-center justify-center text-sm font-medium">
+                      {stock.logo}
+                    </div>
                     <span className="font-medium">{stock.name}</span>
                   </div>
                 </td>
@@ -87,6 +209,11 @@ const MarketMovers = () => {
                 </td>
               </tr>
             ))}
+            {!loading && error && (
+              <tr>
+                <td className="py-4 text-destructive text-sm" colSpan={4}>{error}</td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

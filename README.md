@@ -1,73 +1,79 @@
-# Welcome to your Lovable project
+# Pixel Perfect Clone
 
-## Project info
+## Getting started
 
-**URL**: https://lovable.dev/projects/550e8568-3fba-4fa3-b20a-ff2ba65927c8
-
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/550e8568-3fba-4fa3-b20a-ff2ba65927c8) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+1. Install dependencies
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+npm install
+```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+2. Start development server
 
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```sh
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## API integration
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+This project fetches live NSE data from the `stock-nse-india` API server.
 
-**Use GitHub Codespaces**
+### Step 1: Start the API Server
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+**Option A: Install Yarn (recommended)**
 
-## What technologies are used for this project?
+```powershell
+# Install Yarn globally
+npm install -g yarn
 
-This project is built with:
+# Clone and start API
+git clone https://github.com/hi-imcodeman/stock-nse-india.git
+cd stock-nse-india
+npm install
+npm run start
+```
+
+**Option B: Without Yarn**
+
+```powershell
+git clone https://github.com/hi-imcodeman/stock-nse-india.git
+cd stock-nse-india
+npm install
+
+# Try bypassing the prestart hook that requires yarn
+npm run start --ignore-scripts
+
+# OR manually build if there's a build script, then start
+# npm run build
+# node dist/index.js  # adjust path as needed
+```
+
+The API server should run on `http://localhost:3000`. Visit `http://localhost:3000/api-docs` for endpoints.
+
+### Step 2: Configure Frontend
+
+Create a `.env` file in this project's root:
+
+```env
+VITE_API_BASE_URL=http://localhost:3000
+```
+
+If not set, the app defaults to `http://localhost:3000`.
+
+### Step 3: Start Frontend
+
+```powershell
+# In this project directory
+npm install
+npm run dev
+```
+
+The frontend runs on `http://localhost:8080`.
+
+## Tech stack
 
 - Vite
 - TypeScript
 - React
 - shadcn-ui
 - Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/550e8568-3fba-4fa3-b20a-ff2ba65927c8) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
