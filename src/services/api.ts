@@ -44,6 +44,23 @@ export const api = {
     return data.indices;
   },
 
+  // Fetch equities for a list of symbols
+  getEquitiesBySymbols: async (symbols: string[]) => {
+    const query = `
+      query Movers($symbols: [String!]!) {
+        equities(symbolFilter: { symbols: $symbols }) {
+          symbol
+          details {
+            info { companyName }
+            price { last previousClose tradedQuantity }
+          }
+        }
+      }
+    `;
+    const data = await graphqlRequest<{ equities: any[] }>(query, { symbols });
+    return data.equities;
+  },
+
   // Get top gainers - query equities with positive change, sorted
   getTopGainers: async () => {
     // Note: This API may not have a direct gainers endpoint
@@ -77,6 +94,88 @@ export const api = {
       sectorKeywords.some(keyword => idx.index.toUpperCase().includes(keyword))
     );
     return sectors;
+  },
+
+  // REST API endpoints for stock details
+  async fetchFromRest<T>(endpoint: string): Promise<T> {
+    const url = `${DEFAULT_BASE_URL}${endpoint}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      const text = await response.text().catch(() => "");
+      throw new Error(`API ${response.status}: ${text || response.statusText}`);
+    }
+    return response.json();
+  },
+
+  // Get stock details (equity details)
+  getStockDetails: async (symbol: string) => {
+    return api.fetchFromRest<any>(`/api/equity/${encodeURIComponent(symbol)}`);
+  },
+
+  // Get stock trade info (volume, market depth, etc.)
+  getStockTradeInfo: async (symbol: string) => {
+    return api.fetchFromRest<any>(`/api/equity/tradeInfo/${encodeURIComponent(symbol)}`);
+  },
+
+  // Get stock corporate info (financials, announcements)
+  getStockCorporateInfo: async (symbol: string) => {
+    return api.fetchFromRest<any>(`/api/equity/corporateInfo/${encodeURIComponent(symbol)}`);
+  },
+
+  // Get stock historical data
+  getStockHistoricalData: async (symbol: string, dateStart?: string, dateEnd?: string) => {
+    let endpoint = `/api/equity/historical/${encodeURIComponent(symbol)}`;
+    const params = new URLSearchParams();
+    if (dateStart) params.append('dateStart', dateStart);
+    if (dateEnd) params.append('dateEnd', dateEnd);
+    if (params.toString()) endpoint += `?${params.toString()}`;
+    return api.fetchFromRest<any>(endpoint);
+  },
+
+  // Get stock intraday data
+  getStockIntradayData: async (symbol: string, preOpen = false) => {
+    const endpoint = `/api/equity/intraday/${encodeURIComponent(symbol)}${preOpen ? '?preOpen=true' : ''}`;
+    return api.fetchFromRest<any>(endpoint);
+  },
+
+  // Get stock news from newsdata.io (via backend proxy)
+  getStockNews: async (limit = 10) => {
+    try {
+      const data = await api.fetchFromRest<any>(`/api/news?limit=${limit}`);
+      return data.results || [];
+    } catch (error) {
+      console.error("Error fetching news:", error);
+      return [];
+    }
+  },
+
+  // Get similar stocks (stocks in the same industry/sector)
+  getSimilarStocks: async (symbol: string, limit = 10) => {
+    // First get the stock details to know the industry
+    const stockDetails = await api.getStockDetails(symbol);
+    const industry = stockDetails?.info?.industry;
+    if (!industry) return [];
+    
+    // Get all stocks and filter by industry
+    // This is a simplified approach - in production, you might want a better way
+    const allSymbols = await api.fetchFromRest<string[]>('/api/allSymbols');
+    const industryStocks = allSymbols.filter(s => s !== symbol.toUpperCase()).slice(0, limit * 3);
+    
+    // Fetch details for industry stocks in batches
+    const similarStocks = [];
+    for (const stockSymbol of industryStocks.slice(0, limit)) {
+      try {
+        const details = await api.getStockDetails(stockSymbol);
+        if (details?.info?.industry === industry) {
+          similarStocks.push(details);
+          if (similarStocks.length >= limit) break;
+        }
+      } catch (e) {
+        // Skip if error fetching
+        continue;
+      }
+    }
+    return similarStocks;
   },
 };
 

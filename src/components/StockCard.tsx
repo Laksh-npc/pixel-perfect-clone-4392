@@ -1,4 +1,5 @@
 import { Bookmark } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface StockCardProps {
   logo: string;
@@ -8,13 +9,42 @@ interface StockCardProps {
   percent: string;
   positive: boolean;
   showBookmark?: boolean;
+  symbol?: string; // Add symbol prop for navigation
 }
 
-const StockCard = ({ logo, name, price, change, percent, positive, showBookmark }: StockCardProps) => {
+const StockCard = ({ logo, name, price, change, percent, positive, showBookmark, symbol }: StockCardProps) => {
+  const navigate = useNavigate();
+
+  // Extract symbol from name if not provided (simple heuristic)
+  const getSymbol = () => {
+    if (symbol) return symbol;
+    // Try to extract symbol from name (e.g., "Vodafone Idea" -> "VI")
+    const words = name.split(" ");
+    if (words.length >= 2) {
+      return (words[0].charAt(0) + words[1].charAt(0)).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
+
+  const handleClick = () => {
+    if (symbol) {
+      navigate(`/stock/${symbol}`);
+    }
+  };
+
   return (
-    <div className="border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer bg-card relative">
+    <div 
+      className="border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer bg-card relative"
+      onClick={handleClick}
+    >
       {showBookmark && (
-        <button className="absolute top-4 right-4 text-muted-foreground hover:text-foreground">
+        <button 
+          className="absolute top-4 right-4 text-muted-foreground hover:text-foreground z-10"
+          onClick={(e) => {
+            e.stopPropagation();
+            // Handle bookmark action
+          }}
+        >
           <Bookmark className="w-4 h-4" />
         </button>
       )}

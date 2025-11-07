@@ -8,7 +8,10 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "setup:backend": "node -e \"console.log('Run setup-backend.ps1 (Windows) or ./setup-backend.sh (Linux/Mac) to setup the backend API')\"",
+    "start:backend": "cd ../stock-nse-india && npm start",
+    "start:backend:dev": "cd ../stock-nse-india && npm run start:dev"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

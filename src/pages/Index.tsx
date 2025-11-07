@@ -3,7 +3,6 @@ import MarketTicker from "@/components/MarketTicker";
 import StockCard from "@/components/StockCard";
 import InvestmentSummary from "@/components/InvestmentSummary";
 import ProductsTools from "@/components/ProductsTools";
-import MarketMovers from "@/components/MarketMovers";
 import TradingScreens from "@/components/TradingScreens";
 import SectorsTrending from "@/components/SectorsTrending";
 import NewsSection from "@/components/NewsSection";
@@ -11,24 +10,24 @@ import Footer from "@/components/Footer";
 
 const Index = () => {
   const mostBoughtStocks = [
-    { logo: "Vi", name: "Vodafone Idea", price: "₹9.44", change: "-0.53", percent: "(5.32%)", positive: false },
-    { logo: "TG", name: "TATAGOLD", price: "₹11.37", change: "-0.40", percent: "(3.40%)", positive: false },
-    { logo: "NI", name: "Nippon India ETF Gold B...", price: "₹96.84", change: "-3.30", percent: "(3.30%)", positive: false, showBookmark: true },
-    { logo: "NS", name: "Newgen Software Tech", price: "₹996.55", change: "100.30", percent: "(11.19%)", positive: true },
+    { logo: "Vi", name: "Vodafone Idea", symbol: "IDEA", price: "₹9.44", change: "-0.53", percent: "(5.32%)", positive: false },
+    { logo: "TG", name: "TATAGOLD", symbol: "TATAGOLD", price: "₹11.37", change: "-0.40", percent: "(3.40%)", positive: false },
+    { logo: "NI", name: "Nippon India ETF Gold B...", symbol: "NIPPNETFGETF", price: "₹96.84", change: "-3.30", percent: "(3.30%)", positive: false, showBookmark: true },
+    { logo: "NS", name: "Newgen Software Tech", symbol: "NEWGEN", price: "₹996.55", change: "100.30", percent: "(11.19%)", positive: true },
   ];
 
   const mtfStocks = [
-    { logo: "MD", name: "Mazagon Dock Ship", price: "₹4,206.80", change: "309.80", percent: "(7.95%)", positive: true },
-    { logo: "BSE", name: "BSE", price: "₹200.35", change: "4.46", percent: "(2.28%)", positive: true },
-    { logo: "SS", name: "Sai Silks (Kalaman)", price: "₹3,135.20", change: "469.80", percent: "(17.63%)", positive: true },
-    { logo: "NS", name: "Newgen Software Tech", price: "₹251.97", change: "-20.06", percent: "(7.37%)", positive: false },
+    { logo: "MD", name: "Mazagon Dock Ship", symbol: "MAZAGONDOCK", price: "₹4,206.80", change: "309.80", percent: "(7.95%)", positive: true },
+    { logo: "BSE", name: "BSE", symbol: "BSE", price: "₹200.35", change: "4.46", percent: "(2.28%)", positive: true },
+    { logo: "SS", name: "Sai Silks (Kalaman)", symbol: "SAISILK", price: "₹3,135.20", change: "469.80", percent: "(17.63%)", positive: true },
+    { logo: "NS", name: "Newgen Software Tech", symbol: "NEWGEN", price: "₹251.97", change: "-20.06", percent: "(7.37%)", positive: false },
   ];
 
   const intradayScreenerStocks = [
-    { logo: "N", name: "Netweb Technologies", price: "₹4,206.80", change: "309.80", percent: "(7.95%)", positive: true },
-    { logo: "SS", name: "Sai Silks (Kalaman)", price: "₹200.35", change: "4.46", percent: "(2.28%)", positive: true },
-    { logo: "T", name: "Cartrade Tech", price: "₹3,135.20", change: "469.80", percent: "(17.63%)", positive: true },
-    { logo: "E", name: "EPack Prefab Techno.", price: "₹251.97", change: "-20.06", percent: "(7.37%)", positive: false },
+    { logo: "N", name: "Netweb Technologies", symbol: "NETWEB", price: "₹4,206.80", change: "309.80", percent: "(7.95%)", positive: true },
+    { logo: "SS", name: "Sai Silks (Kalaman)", symbol: "SAISILK", price: "₹200.35", change: "4.46", percent: "(2.28%)", positive: true },
+    { logo: "T", name: "Cartrade Tech", symbol: "CARTECH", price: "₹3,135.20", change: "469.80", percent: "(17.63%)", positive: true },
+    { logo: "E", name: "EPack Prefab Techno.", symbol: "EPACK", price: "₹251.97", change: "-20.06", percent: "(7.37%)", positive: false },
   ];
 
   const etfs = [
@@ -58,7 +57,7 @@ const Index = () => {
               </button>
             </section>
 
-            <MarketMovers />
+            {/* Top market movers temporarily removed for demo */}
 
             <section>
               <h2 className="text-xl font-semibold mb-4">Most traded stocks in MTF</h2>

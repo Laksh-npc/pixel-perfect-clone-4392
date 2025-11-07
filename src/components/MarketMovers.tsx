@@ -1,13 +1,16 @@
 import { ChevronDown, ArrowUpDown, Bookmark } from "lucide-react";
 import { Button } from "./ui/button";
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { api } from "@/services/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { UNIVERSE_TO_SYMBOLS } from "@/lib/universes";
 
 type TabKey = "GAINERS" | "LOSERS" | "VOLUME";
 
 const MarketMovers = () => {
+  const navigate = useNavigate();
   const [tab, setTab] = useState<TabKey>("GAINERS");
   const [gainers, setGainers] = useState<any[]>([]);
   const [losers, setLosers] = useState<any[]>([]);
@@ -16,54 +19,70 @@ const MarketMovers = () => {
   const [universe, setUniverse] = useState<string>("NIFTY 100");
 
   useEffect(() => {
-    let isMounted = true;
+    let active = true;
     (async () => {
       try {
         setLoading(true);
         setError(null);
-        const [g, l] = await Promise.allSettled([
-          api.getTopGainers(),
-          api.getTopLosers(),
-        ]);
-
-        if (g.status === "fulfilled") {
-          const list = Array.isArray(g.value) ? g.value : Array.isArray((g.value as any)?.data) ? (g.value as any).data : [];
-          const mapped = list.map((it: any) => normalizeMover(it, true));
-          if (isMounted) setGainers(mapped);
+        const symbols = UNIVERSE_TO_SYMBOLS[universe as keyof typeof UNIVERSE_TO_SYMBOLS] || [];
+        if (symbols.length === 0) {
+          if (active) {
+            setGainers([]);
+            setLosers([]);
+          }
+          return;
         }
-        if (l.status === "fulfilled") {
-          const list = Array.isArray(l.value) ? l.value : Array.isArray((l.value as any)?.data) ? (l.value as any).data : [];
-          const mapped = list.map((it: any) => normalizeMover(it, false));
-          if (isMounted) setLosers(mapped);
+        const chunkSize = 80;
+        const chunks: string[][] = [];
+        for (let i = 0; i < symbols.length; i += chunkSize) {
+          chunks.push(symbols.slice(i, i + chunkSize));
+        }
+        const responses = await Promise.all(chunks.map(c => api.getEquitiesBySymbols(c)));
+        const equities = responses.flat();
+        const rows = toRows(equities);
+        const g = [...rows].sort((a, b) => b.changePct - a.changePct).slice(0, 6);
+        const l = [...rows].sort((a, b) => a.changePct - b.changePct).slice(0, 6);
+        if (active) {
+          setGainers(g.map(mapRowToStock));
+          setLosers(l.map(mapRowToStock));
         }
       } catch (e: any) {
-        if (isMounted) setError(e?.message || "Failed to load movers");
+        if (active) setError(e?.message || "Failed to load movers");
       } finally {
-        if (isMounted) setLoading(false);
+        if (active) setLoading(false);
       }
     })();
     return () => {
-      isMounted = false;
+      active = false;
     };
-  }, []);
+  }, [universe]);
 
   const stocks = useMemo(() => (tab === "GAINERS" ? gainers : tab === "LOSERS" ? losers : gainers), [tab, gainers, losers]);
 
-  function normalizeMover(it: any, positiveDefault: boolean) {
-    const symbol = it.symbol || it.companyName || it.tradingsymbol || it.name || "-";
-    const last = it.lastPrice || it.ltp || it.price || 0;
-    const change = it.netPrice || it.change || it.variation || 0; // percent or absolute depending on API
-    const absolute = it.netChange || it.absoluteChange || it.changeAbs || 0;
-    const volume = it.tradedQuantity || it.volume || "";
-    const positive = Number(absolute || change) >= 0 ? true : positiveDefault;
+  function toRows(equities: any[]) {
+    return equities.map((e) => {
+      const symbol = e.symbol;
+      const name = e.details?.info?.companyName || symbol;
+      const last = Number(e.details?.price?.last || 0);
+      const prev = Number(e.details?.price?.previousClose || last);
+      const volume = Number(e.details?.price?.tradedQuantity || 0);
+      const changeAbs = last - prev;
+      const changePct = prev ? (changeAbs / prev) * 100 : 0;
+      return { symbol, name, last, prev, volume, changeAbs, changePct };
+    });
+  }
+
+  function mapRowToStock(row: any) {
+    const positive = row.changeAbs >= 0;
     return {
-      name: String(symbol),
-      logo: symbol?.[0] || "•",
-      price: typeof last === "number" ? `₹${last.toLocaleString("en-IN", { maximumFractionDigits: 2 })}` : String(last),
-      change: typeof absolute === "number" ? absolute.toFixed(2) : String(absolute || ""),
-      percent: `(${typeof change === "number" ? change.toFixed(2) : String(change)}%)`,
+      symbol: row.symbol,
+      name: String(row.name),
+      logo: String(row.symbol?.[0] || "•"),
+      price: `₹${row.last.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`,
+      change: `${Math.abs(row.changeAbs).toFixed(2)}`,
+      percent: `(${row.changePct.toFixed(2)}%)`,
       positive,
-      volume: typeof volume === "number" ? volume.toLocaleString("en-IN") : String(volume),
+      volume: row.volume ? row.volume.toLocaleString("en-IN") : "",
     };
   }
 
@@ -166,7 +185,11 @@ const MarketMovers = () => {
               </tr>
             )}
             {!loading && !error && stocks.map((stock, index) => (
-              <tr key={index} className="border-b last:border-b-0 hover:bg-secondary/30 cursor-pointer">
+              <tr 
+                key={index} 
+                className="border-b last:border-b-0 hover:bg-secondary/30 cursor-pointer"
+                onClick={() => stock.symbol && navigate(`/stock/${stock.symbol}`)}
+              >
                 <td className="py-4">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded bg-secondary flex items-center justify-center text-sm font-medium">
