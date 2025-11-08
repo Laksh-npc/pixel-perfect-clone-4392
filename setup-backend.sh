@@ -21,6 +21,21 @@ npm install
 echo "Installing cross-env for cross-platform compatibility..."
 npm install --save-dev cross-env
 
+echo "Replacing yarn with npm in package.json scripts..."
+# Replace yarn with npm in package.json scripts to avoid yarn dependency
+# macOS compatible sed command
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    sed -i '' 's/yarn remove-build/npm run remove-build/g' package.json
+    sed -i '' 's/yarn copy-graphql/npm run copy-graphql/g' package.json
+    sed -i '' 's/yarn build/npm run build/g' package.json
+    sed -i '' 's/yarn lint --fix/npm run lint --fix/g' package.json
+else
+    sed -i 's/yarn remove-build/npm run remove-build/g' package.json
+    sed -i 's/yarn copy-graphql/npm run copy-graphql/g' package.json
+    sed -i 's/yarn build/npm run build/g' package.json
+    sed -i 's/yarn lint --fix/npm run lint --fix/g' package.json
+fi
+
 echo "Building backend..."
 npm run build
 

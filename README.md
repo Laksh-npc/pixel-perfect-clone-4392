@@ -19,18 +19,21 @@ A modern stock market dashboard built with React, TypeScript, and Tailwind CSS, 
 
 1. **Clone this repository**
 ```sh
-git clone https://github.com/YOUR_USERNAME/pixel-perfect-clone-frontend.git
-cd pixel-perfect-clone-frontend
+git clone https://github.com/YOUR_USERNAME/pixel-perfect-clone-4392.git
+cd pixel-perfect-clone-4392
 ```
 
 **Note:** Replace `YOUR_USERNAME` with your actual GitHub username.
 
 2. **Setup Backend API** (Required - one-time setup)
-```powershell
-# Windows
-.\setup-backend.ps1
 
-# Linux/Mac
+**Windows (PowerShell):**
+```powershell
+.\setup-backend.ps1
+```
+
+**Linux/Mac (Bash/Zsh):**
+```bash
 chmod +x setup-backend.sh && ./setup-backend.sh
 ```
 
@@ -43,6 +46,11 @@ npm install
 ```sh
 npm run start:backend
 # Or: cd ../stock-nse-india && npm start
+```
+
+**Note:** If you get an error that port 3000 is already in use, stop the existing backend:
+```sh
+npm run stop:backend
 ```
 
 5. **Start Frontend** (in another terminal)
