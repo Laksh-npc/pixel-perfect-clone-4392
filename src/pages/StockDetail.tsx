@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { api } from "@/services/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Clock, Bookmark, TrendingUp, TrendingDown, Info, ChevronUp, ChevronDown } from "lucide-react";
+import { Clock, Bookmark, TrendingUp, TrendingDown, Info, ChevronUp, ChevronDown, Calendar } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import StockChart from "@/components/StockChart";
 import TradingWidget from "@/components/TradingWidget";
@@ -115,45 +115,40 @@ const StockDetail = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
-      {/* Breadcrumbs */}
-      <div className="border-b bg-muted/40">
-        <div className="container mx-auto px-6 py-2">
-          <div className="text-sm text-muted-foreground">
-            <button onClick={() => navigate("/")} className="hover:text-foreground">Home</button>
-            {" > "}
-            <button onClick={() => navigate("/")} className="hover:text-foreground">Stocks</button>
-            {" > "}
-            <span className="text-foreground">{info.companyName || symbol}</span>
-          </div>
-        </div>
-      </div>
 
-      <div className="container mx-auto px-6 py-8">
+      <div className="container mx-auto px-6 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - Main Content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Stock Header */}
             <div className="flex items-start gap-4">
-              <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-bold text-xl">
+              <div className="w-14 h-14 rounded-md bg-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-sm">
                 {getCompanyLogo(info.companyName || symbol || "")}
               </div>
               <div className="flex-1">
-                <h1 className="text-2xl font-bold mb-1">{info.companyName || symbol}</h1>
-                <div className="flex items-center gap-4 mb-2">
-                  <span className="text-3xl font-bold">₹{currentPrice.toFixed(2)}</span>
-                  <span className={`text-lg font-semibold ${isPositive ? "text-green-600" : "text-red-600"}`}>
+                <h1 className="text-2xl font-bold mb-2 text-gray-900">{info.companyName || symbol}</h1>
+                <div className="flex items-baseline gap-3 mb-3">
+                  <span className="text-3xl font-bold text-gray-900">₹{currentPrice.toFixed(2)}</span>
+                  <span className={`text-base font-medium ${isPositive ? "text-green-600" : "text-red-600"}`}>
                     {isPositive ? "+" : ""}
                     {change.toFixed(2)} ({isPositive ? "+" : ""}
                     {percentChange.toFixed(2)}%) 1D
                   </span>
                 </div>
-                <div className="flex items-center gap-4">
-                  <Button variant="outline" size="sm">
+                <div className="flex items-center gap-3">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-9 px-4 border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
+                  >
                     <Clock className="w-4 h-4 mr-2" />
                     Create Alert
                   </Button>
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="h-9 px-4 border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
+                  >
                     <Bookmark className="w-4 h-4 mr-2" />
                     Watchlist
                   </Button>
@@ -165,30 +160,85 @@ const StockDetail = () => {
             <StockChart symbol={symbol!} />
 
             {/* Create Stock SIP Section */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <Clock className="w-5 h-5" />
-                  <CardTitle>Create Stock SIP</CardTitle>
+            <Card className="border-gray-200 hover:shadow-md transition-all duration-200 cursor-pointer group">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-md bg-gray-100 flex items-center justify-center group-hover:bg-gray-200 transition-colors">
+                      <Calendar className="w-5 h-5 text-gray-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900 group-hover:text-primary transition-colors">Create Stock SIP</h3>
+                      <p className="text-sm text-gray-600">Automate your investments in this Stock.</p>
+                    </div>
+                  </div>
+                  <ChevronUp className="w-5 h-5 text-gray-400 rotate-90 group-hover:text-gray-600 transition-colors" />
                 </div>
-                <CardDescription>Automate your investments in this Stock.</CardDescription>
-              </CardHeader>
+              </CardContent>
             </Card>
 
-            {/* Performance Section */}
-            <PerformanceMetrics priceInfo={priceInfo} securityInfo={securityInfo} tradeInfo={tradeInfo} />
+            {/* Tabs for Overview/News/Events */}
+            <Tabs defaultValue="overview" className="w-full">
+              <TabsList className="h-10 bg-transparent p-0 border-b border-gray-200 rounded-none">
+                <TabsTrigger 
+                  value="overview" 
+                  className="px-4 py-2 text-sm font-medium data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:bg-transparent rounded-none hover:text-gray-900 transition-colors duration-200"
+                >
+                  Overview
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="news" 
+                  className="px-4 py-2 text-sm font-medium data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:bg-transparent rounded-none hover:text-gray-900 transition-colors duration-200"
+                >
+                  News
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="events" 
+                  className="px-4 py-2 text-sm font-medium data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:bg-transparent rounded-none hover:text-gray-900 transition-colors duration-200"
+                >
+                  Events
+                </TabsTrigger>
+              </TabsList>
 
-            {/* Fundamentals Section */}
-            <Fundamentals stockDetails={stockDetails} corporateInfo={corporateInfo} />
+              <TabsContent value="overview" className="space-y-6 mt-6">
+                {/* Performance Section */}
+                <PerformanceMetrics priceInfo={priceInfo} securityInfo={securityInfo} tradeInfo={tradeInfo} />
 
-            {/* Financials Section */}
-            <Financials corporateInfo={corporateInfo} />
+                {/* Fundamentals Section */}
+                <Fundamentals stockDetails={stockDetails} corporateInfo={corporateInfo} />
 
-            {/* About Company */}
-            <AboutCompany stockDetails={stockDetails} corporateInfo={corporateInfo} />
+                {/* Financials Section */}
+                <Financials corporateInfo={corporateInfo} />
 
-            {/* Similar Stocks */}
-            <SimilarStocks symbol={symbol!} currentStockName={info.companyName} />
+                {/* About Company */}
+                <AboutCompany stockDetails={stockDetails} corporateInfo={corporateInfo} />
+
+                {/* Similar Stocks */}
+                <SimilarStocks symbol={symbol!} currentStockName={info.companyName} />
+              </TabsContent>
+
+              <TabsContent value="news" className="mt-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>News</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground">News articles will appear here.</p>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="events" className="mt-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Events</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground">Corporate events will appear here.</p>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </div>
 
           {/* Right Column - Trading Widget */}

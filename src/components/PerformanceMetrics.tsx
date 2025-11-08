@@ -42,11 +42,11 @@ const PerformanceMetrics = ({ priceInfo, securityInfo, tradeInfo }: PerformanceM
   };
 
   return (
-    <Card>
+    <Card className="border-gray-200">
       <CardHeader>
         <div className="flex items-center gap-2">
-          <CardTitle>Performance</CardTitle>
-          <InfoIcon className="w-4 h-4 text-muted-foreground" />
+          <CardTitle className="text-lg font-semibold">Performance</CardTitle>
+          <InfoIcon className="w-4 h-4 text-gray-500" />
         </div>
       </CardHeader>
       <CardContent className="space-y-6">

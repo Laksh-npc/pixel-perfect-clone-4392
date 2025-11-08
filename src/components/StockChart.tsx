@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { api } from "@/services/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { format } from "date-fns";
+import { BarChart3 } from "lucide-react";
 
 interface StockChartProps {
   symbol: string;
@@ -22,7 +24,8 @@ const timePeriods = [
 ];
 
 const StockChart = ({ symbol }: StockChartProps) => {
-  const [selectedPeriod, setSelectedPeriod] = useState("1D");
+  const navigate = useNavigate();
+  const [selectedPeriod, setSelectedPeriod] = useState("6M");
   const [chartData, setChartData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -140,65 +143,104 @@ const StockChart = ({ symbol }: StockChartProps) => {
   const lastPrice = chartData[chartData.length - 1]?.price || 0;
   const isPositive = lastPrice >= firstPrice;
 
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3">
+          <p className="text-xs text-gray-600 mb-1">{format(new Date(label), "MMM dd, yyyy")}</p>
+          <p className={`text-sm font-semibold ${isPositive ? "text-green-600" : "text-red-600"}`}>
+            ₹{Number(payload[0].value).toFixed(2)}
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  const CustomActiveDot = (props: any) => {
+    const { cx, cy } = props;
+    return (
+      <g>
+        <circle cx={cx} cy={cy} r={6} fill={isPositive ? "#10b981" : "#ef4444"} className="drop-shadow-lg" />
+        <circle cx={cx} cy={cy} r={3} fill="white" />
+      </g>
+    );
+  };
+
+
   return (
-    <div className="border rounded-lg p-6 bg-card">
+    <div className="border border-gray-200 rounded-lg bg-white p-6 shadow-sm">
       <div className="mb-4">
         <div className="flex items-center justify-between mb-4">
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-1.5 flex-wrap">
             {timePeriods.map((period) => (
               <Button
                 key={period.value}
-                variant={selectedPeriod === period.value ? "default" : "outline"}
+                variant="ghost"
                 size="sm"
                 onClick={() => setSelectedPeriod(period.value)}
-                className={selectedPeriod === period.value ? "bg-primary" : ""}
+                className={`h-8 px-3 text-sm font-medium transition-all duration-200 ${
+                  selectedPeriod === period.value
+                    ? "bg-primary text-white hover:bg-primary/90 shadow-sm"
+                    : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                }`}
               >
                 {period.label}
               </Button>
             ))}
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
+            <Button variant="ghost" size="sm" className="h-8 text-gray-600 hover:bg-gray-100 transition-colors duration-200">
+              <BarChart3 className="w-4 h-4" />
             </Button>
-            <Button variant="outline" size="sm">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 text-gray-600 hover:bg-gray-100 transition-colors duration-200"
+              onClick={() => navigate(`/terminal/${symbol}`)}
+            >
               Terminal
             </Button>
           </div>
         </div>
       </div>
 
-      <div className="h-96">
+      <div className="h-96 relative">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
+          <LineChart 
+            data={chartData}
+            margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
+          >
+            <defs>
+              <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={isPositive ? "#10b981" : "#ef4444"} stopOpacity={0.3} />
+                <stop offset="100%" stopColor={isPositive ? "#10b981" : "#ef4444"} stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
             <XAxis
               dataKey="date"
               tick={false}
               axisLine={false}
+              domain={['dataMin', 'dataMax']}
             />
             <YAxis
               tick={false}
               axisLine={false}
+              domain={['dataMin - dataMin * 0.02', 'dataMax + dataMax * 0.02']}
             />
             <Tooltip
-              contentStyle={{
-                backgroundColor: "hsl(var(--card))",
-                border: "1px solid hsl(var(--border))",
-                borderRadius: "8px",
-              }}
-              labelFormatter={(value) => format(new Date(value), "MMM dd, yyyy")}
-              formatter={(value: any) => [`₹${Number(value).toFixed(2)}`, "Price"]}
+              content={<CustomTooltip />}
+              cursor={{ stroke: isPositive ? "#10b981" : "#ef4444", strokeWidth: 1, strokeDasharray: "5 5" }}
             />
             <Line
               type="monotone"
               dataKey="price"
               stroke={isPositive ? "#10b981" : "#ef4444"}
-              strokeWidth={2}
+              strokeWidth={2.5}
               dot={false}
-              activeDot={{ r: 4 }}
+              activeDot={<CustomActiveDot />}
+              animationDuration={300}
             />
           </LineChart>
         </ResponsiveContainer>
