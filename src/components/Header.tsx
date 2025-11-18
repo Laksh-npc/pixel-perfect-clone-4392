@@ -1,10 +1,12 @@
-import { Search, Bell, Globe } from "lucide-react";
+import { Search, Bell, Globe, Network } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -37,6 +39,15 @@ const Header = () => {
         </div>
         
         <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate("/dsfm-analysis")}
+            className="flex items-center gap-2 text-sm"
+          >
+            <Network className="w-4 h-4" />
+            DSFM Analysis
+          </Button>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input 

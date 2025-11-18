@@ -132,6 +132,16 @@ export const api = {
     return api.fetchFromRest<any>(endpoint);
   },
 
+  // Get index historical data (for sector indices)
+  getIndexHistoricalData: async (indexSymbol: string, dateStart?: string, dateEnd?: string) => {
+    let endpoint = `/api/index/historical/${encodeURIComponent(indexSymbol)}`;
+    const params = new URLSearchParams();
+    if (dateStart) params.append('dateStart', dateStart);
+    if (dateEnd) params.append('dateEnd', dateEnd);
+    if (params.toString()) endpoint += `?${params.toString()}`;
+    return api.fetchFromRest<any>(endpoint);
+  },
+
   // Get stock intraday data
   getStockIntradayData: async (symbol: string, preOpen = false) => {
     const endpoint = `/api/equity/intraday/${encodeURIComponent(symbol)}${preOpen ? '?preOpen=true' : ''}`;

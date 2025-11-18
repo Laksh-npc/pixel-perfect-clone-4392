@@ -6,6 +6,7 @@ import TerminalHeader from "@/components/terminal/TerminalHeader";
 import ChartToolsSidebar from "@/components/terminal/ChartToolsSidebar";
 import CandlestickChart from "@/components/terminal/CandlestickChart";
 import TerminalWatchlist from "@/components/terminal/TerminalWatchlist";
+import DSFMAnalysisPanel from "@/components/terminal/DSFMAnalysisPanel";
 
 const Terminal = () => {
   const { symbol } = useParams<{ symbol: string }>();
@@ -77,6 +78,7 @@ const Terminal = () => {
             </div>
           </div>
           <TerminalWatchlist />
+          <DSFMAnalysisPanel />
         </div>
       </div>
     );
@@ -123,6 +125,7 @@ const Terminal = () => {
           <CandlestickChart symbol={symbol} stockDetails={stockDetails} />
         </div>
         <TerminalWatchlist />
+        <DSFMAnalysisPanel />
       </div>
     </div>
   );
