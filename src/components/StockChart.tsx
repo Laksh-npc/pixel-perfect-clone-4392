@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "@/services/api";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -6,6 +6,25 @@ import { Button } from "@/components/ui/button";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { format } from "date-fns";
 import { BarChart3 } from "lucide-react";
+
+// Custom formatter for time-based X-axis
+const formatXAxis = (tickItem: any, selectedPeriod: string) => {
+  if (!tickItem) return "";
+  try {
+    const date = tickItem instanceof Date ? tickItem : new Date(tickItem);
+    if (isNaN(date.getTime())) return "";
+    
+    if (selectedPeriod === "1D") {
+      return format(date, "HH:mm");
+    } else if (selectedPeriod === "1W" || selectedPeriod === "1M") {
+      return format(date, "MMM dd");
+    } else {
+      return format(date, "MMM yyyy");
+    }
+  } catch {
+    return "";
+  }
+};
 
 interface StockChartProps {
   symbol: string;
@@ -44,15 +63,48 @@ const StockChart = ({ symbol }: StockChartProps) => {
         switch (selectedPeriod) {
           case "1D":
             // Use intraday data for 1D
-            const intradayData = await api.getStockIntradayData(symbol);
-            if (intradayData?.graphData) {
-              const formatted = intradayData.graphData.map(([timestamp, price]: [number, number]) => ({
-                date: new Date(timestamp),
-                price,
-              }));
-              setChartData(formatted);
-              setLoading(false);
-              return;
+            try {
+              const intradayData = await api.getStockIntradayData(symbol);
+              // Handle both graphData and grapthData (API typo)
+              const graphDataArray = intradayData?.graphData || intradayData?.grapthData;
+              
+              if (graphDataArray && Array.isArray(graphDataArray) && graphDataArray.length > 0) {
+                // Map actual timestamp-price pairs without interpolation
+                const formatted = graphDataArray
+                  .map((dataPoint: any) => {
+                    // Handle both [timestamp, price] and {timestamp, price} formats
+                    let timestamp: number;
+                    let price: number;
+                    
+                    if (Array.isArray(dataPoint)) {
+                      [timestamp, price] = dataPoint;
+                    } else if (dataPoint.timestamp && dataPoint.price) {
+                      timestamp = dataPoint.timestamp;
+                      price = dataPoint.price;
+                    } else {
+                      return null;
+                    }
+                    
+                    if (!timestamp || !price || price <= 0) return null;
+                    
+                    return {
+                      date: timestamp, // Use numeric timestamp for proper time scale
+                      price,
+                      timestamp, // Keep original timestamp for sorting
+                      displayDate: new Date(timestamp), // For display purposes
+                    };
+                  })
+                  .filter((item: any) => item !== null) // Remove invalid entries
+                  .sort((a: any, b: any) => a.timestamp - b.timestamp); // Sort by timestamp
+                
+                if (formatted.length > 0) {
+                  setChartData(formatted);
+                  setLoading(false);
+                  return;
+                }
+              }
+            } catch (intradayError: any) {
+              console.warn("Intraday data not available, trying historical data:", intradayError?.message);
             }
             // Fallback to historical if intraday not available
             startDate.setDate(startDate.getDate() - 1);
@@ -124,30 +176,22 @@ const StockChart = ({ symbol }: StockChartProps) => {
     fetchChartData();
   }, [symbol, selectedPeriod]);
 
-  if (loading) {
-    return <Skeleton className="h-96 w-full" />;
-  }
-
-  if (error || chartData.length === 0) {
-    return (
-      <div className="border rounded-lg p-6 bg-card">
-        <div className="text-center py-8">
-          <p className="text-muted-foreground">Chart data not available</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Determine if price is going up or down
-  const firstPrice = chartData[0]?.price || 0;
-  const lastPrice = chartData[chartData.length - 1]?.price || 0;
-  const isPositive = lastPrice >= firstPrice;
+  // Determine if price is going up or down - calculate before early returns
+  const isPositive = useMemo(() => {
+    if (chartData.length === 0) return true;
+    const firstPrice = chartData[0]?.price || 0;
+    const lastPrice = chartData[chartData.length - 1]?.price || 0;
+    return lastPrice >= firstPrice;
+  }, [chartData]);
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
+      const dateFormat = selectedPeriod === "1D" ? "MMM dd, HH:mm:ss" : "MMM dd, yyyy";
+      // Handle both numeric timestamp and Date object
+      const dateValue = typeof label === 'number' ? new Date(label) : (label instanceof Date ? label : new Date(label));
       return (
         <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3">
-          <p className="text-xs text-gray-600 mb-1">{format(new Date(label), "MMM dd, yyyy")}</p>
+          <p className="text-xs text-gray-600 mb-1">{format(dateValue, dateFormat)}</p>
           <p className={`text-sm font-semibold ${isPositive ? "text-green-600" : "text-red-600"}`}>
             ₹{Number(payload[0].value).toFixed(2)}
           </p>
@@ -166,6 +210,30 @@ const StockChart = ({ symbol }: StockChartProps) => {
       </g>
     );
   };
+
+  if (loading) {
+    return <Skeleton className="h-96 w-full" />;
+  }
+
+  if (error) {
+    return (
+      <div className="border rounded-lg p-6 bg-card">
+        <div className="text-center py-8">
+          <p className="text-muted-foreground">Chart data not available: {error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (chartData.length === 0) {
+    return (
+      <div className="border rounded-lg p-6 bg-card">
+        <div className="text-center py-8">
+          <p className="text-muted-foreground">Loading chart data...</p>
+        </div>
+      </div>
+    );
+  }
 
 
   return (
@@ -220,9 +288,12 @@ const StockChart = ({ symbol }: StockChartProps) => {
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
             <XAxis
               dataKey="date"
-              tick={false}
-              axisLine={false}
+              type="number"
+              scale="time"
               domain={['dataMin', 'dataMax']}
+              tick={selectedPeriod === "1D" ? { fontSize: 11, fill: "#666" } : { fontSize: 11, fill: "#666" }}
+              tickFormatter={(value) => formatXAxis(value, selectedPeriod)}
+              axisLine={false}
             />
             <YAxis
               tick={false}
@@ -237,10 +308,12 @@ const StockChart = ({ symbol }: StockChartProps) => {
               type="monotone"
               dataKey="price"
               stroke={isPositive ? "#10b981" : "#ef4444"}
-              strokeWidth={2.5}
+              strokeWidth={selectedPeriod === "1D" ? 2 : 2.5}
               dot={false}
               activeDot={<CustomActiveDot />}
               animationDuration={300}
+              connectNulls={false}
+              isAnimationActive={true}
             />
           </LineChart>
         </ResponsiveContainer>
