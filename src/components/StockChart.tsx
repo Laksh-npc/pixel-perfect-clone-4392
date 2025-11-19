@@ -61,6 +61,10 @@ const StockChart = ({ symbol }: StockChartProps) => {
 
         // Calculate date range based on selected period
         switch (selectedPeriod) {
+          case "NSE":
+            // NSE typically shows 1 day data, same as 1D
+            startDate.setDate(startDate.getDate() - 1);
+            break;
           case "1D":
             // Use intraday data for 1D
             try {
@@ -143,31 +147,94 @@ const StockChart = ({ symbol }: StockChartProps) => {
         const formattedData: any[] = [];
         if (Array.isArray(historicalData)) {
           historicalData.forEach((period: any) => {
-            if (period?.data) {
+            if (period?.data && Array.isArray(period.data)) {
               period.data.forEach((item: any) => {
+                const timestamp = item.CH_TIMESTAMP || item.TIMESTAMP || item.date || item.timestamp;
+                if (!timestamp) return;
+                
+                // Convert to numeric timestamp
+                const dateValue = timestamp instanceof Date ? timestamp.getTime() : new Date(timestamp).getTime();
+                if (isNaN(dateValue)) return;
+                
+                const price = item.CH_LAST_TRADED_PRICE || item.CH_CLOSING_PRICE || item.CLOSE || item.close || 0;
+                if (!price || price <= 0) return;
+                
                 formattedData.push({
-                  date: new Date(item.CH_TIMESTAMP || item.TIMESTAMP),
-                  price: item.CH_LAST_TRADED_PRICE || item.CH_CLOSING_PRICE || 0,
-                  open: item.CH_OPENING_PRICE || 0,
-                  high: item.CH_TRADE_HIGH_PRICE || 0,
-                  low: item.CH_TRADE_LOW_PRICE || 0,
-                  volume: item.CH_TOT_TRADED_QTY || 0,
+                  date: dateValue, // Use numeric timestamp for consistency
+                  price: price,
+                  timestamp: dateValue, // Keep for sorting
+                  open: item.CH_OPENING_PRICE || item.OPEN || item.open || 0,
+                  high: item.CH_TRADE_HIGH_PRICE || item.HIGH || item.high || 0,
+                  low: item.CH_TRADE_LOW_PRICE || item.LOW || item.low || 0,
+                  volume: item.CH_TOT_TRADED_QTY || item.VOLUME || item.volume || 0,
+                });
+              });
+            } else if (Array.isArray(period)) {
+              // Handle case where period is directly an array
+              period.forEach((item: any) => {
+                const timestamp = item.CH_TIMESTAMP || item.TIMESTAMP || item.date || item.timestamp;
+                if (!timestamp) return;
+                
+                const dateValue = timestamp instanceof Date ? timestamp.getTime() : new Date(timestamp).getTime();
+                if (isNaN(dateValue)) return;
+                
+                const price = item.CH_LAST_TRADED_PRICE || item.CH_CLOSING_PRICE || item.CLOSE || item.close || 0;
+                if (!price || price <= 0) return;
+                
+                formattedData.push({
+                  date: dateValue,
+                  price: price,
+                  timestamp: dateValue,
+                  open: item.CH_OPENING_PRICE || item.OPEN || item.open || 0,
+                  high: item.CH_TRADE_HIGH_PRICE || item.HIGH || item.high || 0,
+                  low: item.CH_TRADE_LOW_PRICE || item.LOW || item.low || 0,
+                  volume: item.CH_TOT_TRADED_QTY || item.VOLUME || item.volume || 0,
                 });
               });
             }
           });
+        } else if (historicalData && typeof historicalData === 'object' && !Array.isArray(historicalData)) {
+          // Handle case where historicalData is an object with a data property
+          if (historicalData.data && Array.isArray(historicalData.data)) {
+            historicalData.data.forEach((item: any) => {
+              const timestamp = item.CH_TIMESTAMP || item.TIMESTAMP || item.date || item.timestamp;
+              if (!timestamp) return;
+              
+              const dateValue = timestamp instanceof Date ? timestamp.getTime() : new Date(timestamp).getTime();
+              if (isNaN(dateValue)) return;
+              
+              const price = item.CH_LAST_TRADED_PRICE || item.CH_CLOSING_PRICE || item.CLOSE || item.close || 0;
+              if (!price || price <= 0) return;
+              
+              formattedData.push({
+                date: dateValue,
+                price: price,
+                timestamp: dateValue,
+                open: item.CH_OPENING_PRICE || item.OPEN || item.open || 0,
+                high: item.CH_TRADE_HIGH_PRICE || item.HIGH || item.high || 0,
+                low: item.CH_TRADE_LOW_PRICE || item.LOW || item.low || 0,
+                volume: item.CH_TOT_TRADED_QTY || item.VOLUME || item.volume || 0,
+              });
+            });
+          }
         }
 
-        // Sort by date and limit data points for better performance
-        formattedData.sort((a, b) => a.date.getTime() - b.date.getTime());
+        // Sort by timestamp and limit data points for better performance
+        formattedData.sort((a, b) => a.timestamp - b.timestamp);
         const limitedData = formattedData.length > 500 
           ? formattedData.filter((_, i) => i % Math.ceil(formattedData.length / 500) === 0)
           : formattedData;
 
-        setChartData(limitedData);
+        if (limitedData.length > 0) {
+          setChartData(limitedData);
+        } else {
+          throw new Error("No historical data available for the selected period");
+        }
       } catch (err: any) {
-        setError(err?.message || "Failed to load chart data");
+        const errorMessage = err?.message || "Failed to load chart data";
+        setError(errorMessage);
         console.error("Error fetching chart data:", err);
+        setChartData([]); // Clear chart data on error
       } finally {
         setLoading(false);
       }
