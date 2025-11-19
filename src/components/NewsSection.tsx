@@ -5,11 +5,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
 
 interface NewsItem {
+  id: string;
   title: string;
   description: string;
-  source_id: string;
-  pubDate: string;
-  link: string;
+  image: string | null;
+  url: string;
+  publishedAt: string;
+  source: string;
+  category?: string;
   companyName?: string;
   symbol?: string;
   change?: number;
@@ -21,6 +24,7 @@ const NewsSection = () => {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
 
   // Common Indian company names and their NSE symbols (expanded list)
   const companySymbolMap: Record<string, string> = {
@@ -117,57 +121,81 @@ const NewsSection = () => {
         setLoading(true);
         setError(null);
         
-        const newsData = await api.getStockNews(20); // Fetch more to filter
+        // Fetch merged news from Finnhub (with NewsAPI fallback)
+        const newsData = await api.getMergedNews(20);
         
-        // Process news items
+        if (!newsData || newsData.length === 0) {
+          setNews([]);
+          setLoading(false);
+          return;
+        }
+        
+        // Process news items - try to extract company names and get stock data
         const processedNews: NewsItem[] = [];
         const processedSymbols = new Set<string>();
         
         for (const item of newsData) {
           const { name, symbol } = extractCompanyName(item.title || '', item.description || '');
           
-          // Skip if no company found or already processed this symbol
-          if (!symbol || !name || processedSymbols.has(symbol)) {
-            continue;
+          // If we found a company, try to get stock data
+          if (symbol && name && !processedSymbols.has(symbol)) {
+            let change = 0;
+            let changePercent = 0;
+            
+            try {
+              // Add small delay to avoid rate limiting
+              await new Promise(resolve => setTimeout(resolve, 200));
+              const stockData = await getStockChange(symbol);
+              change = stockData.change;
+              changePercent = stockData.changePercent;
+            } catch (error) {
+              // Continue without stock data if unavailable
+            }
+            
+            processedNews.push({
+              ...item,
+              companyName: name,
+              symbol,
+              change,
+              changePercent,
+            });
+            
+            processedSymbols.add(symbol);
+          } else {
+            // Add news even without company match (but limit these)
+            if (processedNews.length < 8) {
+              processedNews.push({
+                ...item,
+                companyName: item.source || "Market News",
+              });
+            }
           }
           
-          let change = 0;
-          let changePercent = 0;
-          
-          try {
-            // Add small delay to avoid rate limiting
-            await new Promise(resolve => setTimeout(resolve, 200));
-            const stockData = await getStockChange(symbol);
-            change = stockData.change;
-            changePercent = stockData.changePercent;
-          } catch (error) {
-            // Skip if stock data not available
-            continue;
-          }
-          
-          processedNews.push({
-            ...item,
-            companyName: name,
-            symbol,
-            change,
-            changePercent,
-          });
-          
-          processedSymbols.add(symbol);
-          
-          // Stop when we have 4 valid news items
-          if (processedNews.length >= 4) {
+          // Stop when we have enough news items (prioritize company-matched news)
+          if (processedNews.length >= 8) {
             break;
           }
         }
         
-        setNews(processedNews);
+        // Sort by published date (newest first) and take top 4-8 items
+        processedNews.sort((a, b) => {
+          const dateA = new Date(a.publishedAt).getTime();
+          const dateB = new Date(b.publishedAt).getTime();
+          return dateB - dateA;
+        });
+        
+        // Prioritize items with company/symbol matches, then take top 4
+        const withSymbol = processedNews.filter(item => item.symbol);
+        const withoutSymbol = processedNews.filter(item => !item.symbol);
+        const finalNews = [...withSymbol, ...withoutSymbol].slice(0, 4);
+        
+        setNews(finalNews);
       } catch (err: any) {
         // Don't set error state for expected failures (API unavailable)
         // Just set empty news array
         setNews([]);
         // Only log unexpected errors
-        if (!err?.message?.includes("Network error") && !err?.message?.includes("404")) {
+        if (!err?.message?.includes("Network error") && !err?.message?.includes("404") && !err?.message?.includes("CORS")) {
           console.warn("Unexpected error fetching news:", err);
         }
       } finally {
@@ -190,7 +218,19 @@ const NewsSection = () => {
   const formatTime = (dateString: string) => {
     try {
       const date = new Date(dateString);
-      return formatDistanceToNow(date, { addSuffix: false });
+      const distance = formatDistanceToNow(date, { addSuffix: false });
+      // Convert to "X mins ago" or "X hours ago" format
+      if (distance.includes("minute")) {
+        const mins = distance.match(/\d+/)?.[0] || "few";
+        return `${mins} mins`;
+      } else if (distance.includes("hour")) {
+        const hours = distance.match(/\d+/)?.[0] || "few";
+        return `${hours} hrs`;
+      } else if (distance.includes("day")) {
+        const days = distance.match(/\d+/)?.[0] || "few";
+        return `${days} days`;
+      }
+      return distance;
     } catch {
       return "Few hours";
     }
@@ -199,6 +239,8 @@ const NewsSection = () => {
   const handleNewsClick = (item: NewsItem) => {
     if (item.symbol) {
       navigate(`/stock/${item.symbol}`);
+    } else if (item.url) {
+      window.open(item.url, '_blank', 'noopener,noreferrer');
     }
   };
 
@@ -232,31 +274,50 @@ const NewsSection = () => {
         {news.map((item, index) => {
           const isPositive = (item.changePercent || 0) >= 0;
           const changePercent = item.changePercent || 0;
+          const hasImage = item.image && item.image.trim() !== '';
           
           return (
             <div
-              key={index}
+              key={item.id || index}
               className="border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer bg-white border-gray-200"
               onClick={() => handleNewsClick(item)}
             >
               <div className="flex items-start gap-3 mb-3">
-                <div className="w-10 h-10 rounded bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
-                  {getCompanyLogo(item.companyName || "")}
-                </div>
-                <div className="flex-1 min-w-0 flex items-center justify-between">
-                  <div className="font-medium text-sm">{item.companyName}</div>
-                  <div className={`text-sm font-semibold ml-2 ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-                    {isPositive ? '+' : ''}{changePercent.toFixed(2)}%
+                {hasImage && !imageErrors.has(item.id) ? (
+                  <img 
+                    src={item.image!} 
+                    alt={item.title}
+                    className="w-16 h-16 rounded object-cover flex-shrink-0"
+                    onError={() => {
+                      // Mark image as failed to load
+                      setImageErrors(prev => new Set(prev).add(item.id));
+                    }}
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
+                    {getCompanyLogo(item.companyName || "")}
                   </div>
+                )}
+                <div className="flex-1 min-w-0 flex items-center justify-between">
+                  <div className="font-medium text-sm">{item.companyName || item.source}</div>
+                  {item.changePercent !== undefined && (
+                    <div className={`text-sm font-semibold ml-2 ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                      {isPositive ? '+' : ''}{changePercent.toFixed(2)}%
+                    </div>
+                  )}
                 </div>
               </div>
+              
+              <h3 className="text-sm font-semibold text-gray-900 mb-2 line-clamp-2">
+                {item.title}
+              </h3>
               
               <p className="text-sm text-gray-600 mb-3 line-clamp-3 leading-relaxed">
                 {item.description || item.title}
               </p>
               
               <div className="text-xs text-gray-500">
-                {item.source_id ? item.source_id.split('.').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ') : 'News'} · {formatTime(item.pubDate)}
+                {item.source ? item.source.split('.').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ') : 'News'} · {formatTime(item.publishedAt)}
               </div>
             </div>
           );

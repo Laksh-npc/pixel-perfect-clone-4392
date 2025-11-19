@@ -244,6 +244,94 @@ export const api = {
     }
   },
 
+  // Fetch news from Finnhub API (primary source)
+  getFinnhubNews: async () => {
+    try {
+      const FINNHUB_API_KEY = "d4eqen1r01qlhj14v520d4eqen1r01qlhj14v52g";
+      const url = `https://finnhub.io/api/v1/news?category=general&token=${FINNHUB_API_KEY}`;
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`Finnhub API error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      return Array.isArray(data) ? data : [];
+    } catch (error: any) {
+      console.warn("Failed to fetch from Finnhub:", error.message);
+      return [];
+    }
+  },
+
+  // Fetch news from NewsAPI (fallback source)
+  getNewsAPINews: async () => {
+    try {
+      const NEWSAPI_API_KEY = "07e428f73d03408aa5f5096d5351452d";
+      const url = `https://newsapi.org/v2/everything?q=stocks OR nifty OR sensex&language=en&sortBy=publishedAt&apiKey=${NEWSAPI_API_KEY}`;
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`NewsAPI error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      return Array.isArray(data.articles) ? data.articles : [];
+    } catch (error: any) {
+      console.warn("Failed to fetch from NewsAPI:", error.message);
+      return [];
+    }
+  },
+
+  // Get merged news from both sources with fallback
+  getMergedNews: async (limit = 20) => {
+    // Try Finnhub first
+    let news = await api.getFinnhubNews();
+    
+    // If Finnhub fails or returns empty, try NewsAPI
+    if (!news || news.length === 0) {
+      news = await api.getNewsAPINews();
+    }
+    
+    // Normalize and merge news items
+    const normalizedNews = news.map((item: any) => {
+      // Finnhub format
+      if (item.headline || item.summary) {
+        return {
+          id: item.id || Math.random().toString(),
+          title: item.headline || item.title || "",
+          description: item.summary || item.description || "",
+          image: item.image || item.urlToImage || null,
+          url: item.url || item.link || "",
+          publishedAt: item.datetime ? new Date(item.datetime * 1000).toISOString() : (item.publishedAt || item.pubDate || new Date().toISOString()),
+          source: item.source || (item.source_id ? item.source_id : "News"),
+          category: item.category || "general",
+        };
+      }
+      
+      // NewsAPI format
+      return {
+        id: item.url || Math.random().toString(),
+        title: item.title || "",
+        description: item.description || "",
+        image: item.urlToImage || null,
+        url: item.url || "",
+        publishedAt: item.publishedAt || new Date().toISOString(),
+        source: item.source?.name || "News",
+        category: "general",
+      };
+    });
+    
+    // Sort by published date (newest first)
+    normalizedNews.sort((a, b) => {
+      const dateA = new Date(a.publishedAt).getTime();
+      const dateB = new Date(b.publishedAt).getTime();
+      return dateB - dateA;
+    });
+    
+    // Return limited results
+    return normalizedNews.slice(0, limit);
+  },
+
   // Get similar stocks (stocks in the same industry/sector)
   getSimilarStocks: async (symbol: string, limit = 10) => {
     // First get the stock details to know the industry
