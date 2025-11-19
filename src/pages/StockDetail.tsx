@@ -15,6 +15,7 @@ import Fundamentals from "@/components/Fundamentals";
 import SimilarStocks from "@/components/SimilarStocks";
 import Financials from "@/components/Financials";
 import AboutCompany from "@/components/AboutCompany";
+import CreateAlertDialog from "@/components/CreateAlertDialog";
 
 const StockDetail = () => {
   const { symbol } = useParams<{ symbol: string }>();
@@ -24,6 +25,7 @@ const StockDetail = () => {
   const [tradeInfo, setTradeInfo] = useState<any>(null);
   const [corporateInfo, setCorporateInfo] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [alertDialogOpen, setAlertDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!symbol) {
@@ -116,44 +118,37 @@ const StockDetail = () => {
     <div className="min-h-screen bg-background">
       <Header />
 
-      <div className="container mx-auto px-6 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="container mx-auto px-4 py-4 max-w-7xl">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Left Column - Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Stock Header */}
-            <div className="flex items-start gap-4">
-              <div className="w-14 h-14 rounded-md bg-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-sm">
-                {getCompanyLogo(info.companyName || symbol || "")}
+          <div className="lg:col-span-2 space-y-4">
+            {/* Stock Header - Match Groww style */}
+            <div className="pb-2 border-b border-gray-200">
+              <h1 className="text-lg font-semibold text-gray-900 mb-1">{info.companyName || symbol}</h1>
+              <div className="text-sm text-gray-600">
+                NSE ₹{currentPrice.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className={isPositive ? "text-green-600" : "text-red-600"}>({isPositive ? "+" : ""}{percentChange.toFixed(2)}%)</span> · BSE ₹{currentPrice.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-primary hover:underline cursor-pointer">Depth</span>
               </div>
-              <div className="flex-1">
-                <h1 className="text-2xl font-bold mb-2 text-gray-900">{info.companyName || symbol}</h1>
-                <div className="flex items-baseline gap-3 mb-3">
-                  <span className="text-3xl font-bold text-gray-900">₹{currentPrice.toFixed(2)}</span>
-                  <span className={`text-base font-medium ${isPositive ? "text-green-600" : "text-red-600"}`}>
-                    {isPositive ? "+" : ""}
-                    {change.toFixed(2)} ({isPositive ? "+" : ""}
-                    {percentChange.toFixed(2)}%) 1D
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="h-9 px-4 border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
-                  >
-                    <Clock className="w-4 h-4 mr-2" />
-                    Create Alert
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="h-9 px-4 border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
-                  >
-                    <Bookmark className="w-4 h-4 mr-2" />
-                    Watchlist
-                  </Button>
-                </div>
-              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2 pb-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setAlertDialogOpen(true)}
+                className="h-9 px-4 border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
+              >
+                <Clock className="w-4 h-4 mr-2" />
+                Create Alert
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="h-9 px-4 border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
+              >
+                <Bookmark className="w-4 h-4 mr-2" />
+                Watchlist
+              </Button>
             </div>
 
             {/* Chart */}
@@ -177,30 +172,36 @@ const StockDetail = () => {
               </CardContent>
             </Card>
 
-            {/* Tabs for Overview/News/Events */}
+            {/* Tabs for Overview/News/Events/F&O - Match Groww style */}
             <Tabs defaultValue="overview" className="w-full">
-              <TabsList className="h-10 bg-transparent p-0 border-b border-gray-200 rounded-none">
+              <TabsList className="h-10 bg-transparent p-0 border-b border-gray-200 rounded-none gap-0">
                 <TabsTrigger 
                   value="overview" 
-                  className="px-4 py-2 text-sm font-medium data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:bg-transparent rounded-none hover:text-gray-900 transition-colors duration-200"
+                  className="px-4 py-2 text-sm font-medium data-[state=active]:border-b-2 data-[state=active]:border-green-500 data-[state=active]:text-green-600 data-[state=active]:bg-transparent rounded-none hover:text-gray-900 transition-colors duration-200"
                 >
                   Overview
                 </TabsTrigger>
                 <TabsTrigger 
                   value="news" 
-                  className="px-4 py-2 text-sm font-medium data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:bg-transparent rounded-none hover:text-gray-900 transition-colors duration-200"
+                  className="px-4 py-2 text-sm font-medium data-[state=active]:border-b-2 data-[state=active]:border-green-500 data-[state=active]:text-green-600 data-[state=active]:bg-transparent rounded-none hover:text-gray-900 transition-colors duration-200"
                 >
                   News
                 </TabsTrigger>
                 <TabsTrigger 
                   value="events" 
-                  className="px-4 py-2 text-sm font-medium data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:bg-transparent rounded-none hover:text-gray-900 transition-colors duration-200"
+                  className="px-4 py-2 text-sm font-medium data-[state=active]:border-b-2 data-[state=active]:border-green-500 data-[state=active]:text-green-600 data-[state=active]:bg-transparent rounded-none hover:text-gray-900 transition-colors duration-200"
                 >
                   Events
                 </TabsTrigger>
+                <TabsTrigger 
+                  value="fno" 
+                  className="px-4 py-2 text-sm font-medium data-[state=active]:border-b-2 data-[state=active]:border-green-500 data-[state=active]:text-green-600 data-[state=active]:bg-transparent rounded-none hover:text-gray-900 transition-colors duration-200"
+                >
+                  F&O
+                </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="overview" className="space-y-6 mt-6">
+              <TabsContent value="overview" className="space-y-4 mt-4">
                 {/* Performance Section */}
                 <PerformanceMetrics priceInfo={priceInfo} securityInfo={securityInfo} tradeInfo={tradeInfo} />
 
@@ -242,7 +243,7 @@ const StockDetail = () => {
           </div>
 
           {/* Right Column - Trading Widget */}
-          <div className="space-y-6">
+          <div className="lg:sticky lg:top-4 h-fit">
             <TradingWidget
               symbol={symbol!}
               companyName={info.companyName || symbol || ""}
@@ -252,6 +253,13 @@ const StockDetail = () => {
           </div>
         </div>
       </div>
+
+      <CreateAlertDialog
+        open={alertDialogOpen}
+        onOpenChange={setAlertDialogOpen}
+        symbol={symbol}
+        currentPrice={currentPrice}
+      />
 
       <Footer />
     </div>

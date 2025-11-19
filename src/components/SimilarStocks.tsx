@@ -132,11 +132,11 @@ const SimilarStocks = ({ symbol, currentStockName }: SimilarStocksProps) => {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Similar Stocks</CardTitle>
+    <Card className="border-gray-200 shadow-sm">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base font-semibold text-gray-900">Similar Stocks</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-0">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>

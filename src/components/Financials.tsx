@@ -80,17 +80,17 @@ const Financials = ({ corporateInfo }: FinancialsProps) => {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Financials</CardTitle>
-        <p className="text-sm text-muted-foreground mt-1">*All values are in Rs. Cr</p>
+    <Card className="border-gray-200 shadow-sm">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base font-semibold text-gray-900">Financials</CardTitle>
+        <p className="text-xs text-gray-600 mt-1">*All values are in Rs. Cr</p>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-0">
         <Tabs value={selectedTab} onValueChange={(v) => setSelectedTab(v as any)}>
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="Revenue">Revenue</TabsTrigger>
-            <TabsTrigger value="Profit">Profit</TabsTrigger>
-            <TabsTrigger value="Net Worth">Net Worth</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3 h-10 bg-transparent p-0 border-b border-gray-200 rounded-none">
+            <TabsTrigger value="Revenue" className="data-[state=active]:border-b-2 data-[state=active]:border-green-500 data-[state=active]:text-green-600 rounded-none">Revenue</TabsTrigger>
+            <TabsTrigger value="Profit" className="data-[state=active]:border-b-2 data-[state=active]:border-green-500 data-[state=active]:text-green-600 rounded-none">Profit</TabsTrigger>
+            <TabsTrigger value="Net Worth" className="data-[state=active]:border-b-2 data-[state=active]:border-green-500 data-[state=active]:text-green-600 rounded-none">Net Worth</TabsTrigger>
           </TabsList>
 
           <TabsContent value={selectedTab} className="mt-6">
@@ -119,12 +119,13 @@ const Financials = ({ corporateInfo }: FinancialsProps) => {
               </ResponsiveContainer>
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mt-4">
               <div className="flex gap-2">
                 <Button
                   variant={timePeriod === "Quarterly" ? "default" : "outline"}
                   size="sm"
                   onClick={() => setTimePeriod("Quarterly")}
+                  className={timePeriod === "Quarterly" ? "bg-green-500 hover:bg-green-600 text-white border-0" : ""}
                 >
                   Quarterly
                 </Button>
@@ -132,11 +133,12 @@ const Financials = ({ corporateInfo }: FinancialsProps) => {
                   variant={timePeriod === "Yearly" ? "default" : "outline"}
                   size="sm"
                   onClick={() => setTimePeriod("Yearly")}
+                  className={timePeriod === "Yearly" ? "bg-green-500 hover:bg-green-600 text-white border-0" : ""}
                 >
                   Yearly
                 </Button>
               </div>
-              <Button variant="link" className="text-primary text-sm">
+              <Button variant="link" className="text-primary text-sm p-0 h-auto font-normal">
                 See Details
               </Button>
             </div>

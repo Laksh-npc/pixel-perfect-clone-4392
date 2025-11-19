@@ -19,8 +19,16 @@ const PerformanceMetrics = ({ priceInfo, securityInfo, tradeInfo }: PerformanceM
   
   const volume = priceInfo?.totalTradedVolume || tradeInfo?.tradeInfo?.totalTradedVolume || 0;
   const totalTradedValue = tradeInfo?.tradeInfo?.totalTradedValue || 0;
-  const upperCircuit = priceInfo?.upperCP || 0;
-  const lowerCircuit = priceInfo?.lowerCP || 0;
+  
+  // Ensure upperCircuit and lowerCircuit are numbers
+  const upperCircuit = typeof priceInfo?.upperCP === 'number' ? priceInfo.upperCP : (typeof priceInfo?.upperCP === 'string' ? parseFloat(priceInfo.upperCP) : 0);
+  const lowerCircuit = typeof priceInfo?.lowerCP === 'number' ? priceInfo.lowerCP : (typeof priceInfo?.lowerCP === 'string' ? parseFloat(priceInfo.lowerCP) : 0);
+  
+  // Ensure all numeric values are properly converted
+  const safeToFixed = (value: any, decimals: number = 2): string => {
+    const num = typeof value === 'number' ? value : (typeof value === 'string' ? parseFloat(value) : 0);
+    return isNaN(num) ? '0.00' : num.toFixed(decimals);
+  };
 
   // Calculate position of current price within range
   const todayRange = todayHigh - todayLow;
@@ -42,83 +50,83 @@ const PerformanceMetrics = ({ priceInfo, securityInfo, tradeInfo }: PerformanceM
   };
 
   return (
-    <Card className="border-gray-200">
-      <CardHeader>
+    <Card className="border-gray-200 shadow-sm">
+      <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
-          <CardTitle className="text-lg font-semibold">Performance</CardTitle>
+          <CardTitle className="text-base font-semibold text-gray-900">Performance</CardTitle>
           <InfoIcon className="w-4 h-4 text-gray-500" />
         </div>
       </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Today's Low/High */}
+      <CardContent className="space-y-5 pt-0">
+        {/* Today's Low/High - Match Groww style */}
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Today&apos;s Low</span>
-            <span className="font-medium">{todayLow.toFixed(2)}</span>
+            <span className="text-gray-600">Today&apos;s Low</span>
+            <span className="font-medium text-gray-900">{safeToFixed(todayLow)}</span>
           </div>
-          <div className="relative h-2 bg-muted rounded-full">
+          <div className="relative h-2 bg-gray-200 rounded-full">
             <div
-              className="absolute h-2 bg-primary rounded-full"
+              className="absolute h-2 bg-gray-400 rounded-full"
               style={{ width: `${todayPosition}%` }}
             />
             <div
-              className="absolute w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px] border-transparent border-t-foreground"
+              className="absolute w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px] border-transparent border-t-gray-700"
               style={{ left: `calc(${todayPosition}% - 6px)`, top: "-6px" }}
             />
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Today&apos;s High</span>
-            <span className="font-medium">{todayHigh.toFixed(2)}</span>
+            <span className="text-gray-600">Today&apos;s High</span>
+            <span className="font-medium text-gray-900">{safeToFixed(todayHigh)}</span>
           </div>
         </div>
 
-        {/* 52 Week Low/High */}
+        {/* 52 Week Low/High - Match Groww style */}
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">52W Low</span>
-            <span className="font-medium">{week52Low.toFixed(2)}</span>
+            <span className="text-gray-600">52W Low</span>
+            <span className="font-medium text-gray-900">{safeToFixed(week52Low)}</span>
           </div>
-          <div className="relative h-2 bg-muted rounded-full">
+          <div className="relative h-2 bg-gray-200 rounded-full">
             <div
-              className="absolute h-2 bg-primary rounded-full"
+              className="absolute h-2 bg-gray-400 rounded-full"
               style={{ width: `${week52Position}%` }}
             />
             <div
-              className="absolute w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px] border-transparent border-t-foreground"
+              className="absolute w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px] border-transparent border-t-gray-700"
               style={{ left: `calc(${week52Position}% - 6px)`, top: "-6px" }}
             />
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">52W High</span>
-            <span className="font-medium">{week52High.toFixed(2)}</span>
+            <span className="text-gray-600">52W High</span>
+            <span className="font-medium text-gray-900">{safeToFixed(week52High)}</span>
           </div>
         </div>
 
-        {/* Other Metrics */}
-        <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+        {/* Other Metrics - Match Groww style */}
+        <div className="grid grid-cols-2 gap-x-6 gap-y-3 pt-4 border-t border-gray-200">
           <div>
-            <div className="text-sm text-muted-foreground mb-1">Open</div>
-            <div className="font-medium">{open.toFixed(2)}</div>
+            <div className="text-sm text-gray-600 mb-1">Open</div>
+            <div className="text-sm font-medium text-gray-900">{safeToFixed(open)}</div>
           </div>
           <div>
-            <div className="text-sm text-muted-foreground mb-1">Prev. Close</div>
-            <div className="font-medium">{previousClose.toFixed(2)}</div>
+            <div className="text-sm text-gray-600 mb-1">Prev. Close</div>
+            <div className="text-sm font-medium text-gray-900">{safeToFixed(previousClose)}</div>
           </div>
           <div>
-            <div className="text-sm text-muted-foreground mb-1">Volume</div>
-            <div className="font-medium">{formatVolume(volume)}</div>
+            <div className="text-sm text-gray-600 mb-1">Volume</div>
+            <div className="text-sm font-medium text-gray-900">{formatVolume(volume)}</div>
           </div>
           <div>
-            <div className="text-sm text-muted-foreground mb-1">Total traded value</div>
-            <div className="font-medium">{formatValue(totalTradedValue)}</div>
+            <div className="text-sm text-gray-600 mb-1">Total traded value</div>
+            <div className="text-sm font-medium text-gray-900">{formatValue(totalTradedValue)}</div>
           </div>
           <div>
-            <div className="text-sm text-muted-foreground mb-1">Upper Circuit</div>
-            <div className="font-medium">{upperCircuit}</div>
+            <div className="text-sm text-gray-600 mb-1">Upper Circuit</div>
+            <div className="text-sm font-medium text-gray-900">{safeToFixed(upperCircuit)}</div>
           </div>
           <div>
-            <div className="text-sm text-muted-foreground mb-1">Lower Circuit</div>
-            <div className="font-medium">{lowerCircuit}</div>
+            <div className="text-sm text-gray-600 mb-1">Lower Circuit</div>
+            <div className="text-sm font-medium text-gray-900">{safeToFixed(lowerCircuit)}</div>
           </div>
         </div>
       </CardContent>

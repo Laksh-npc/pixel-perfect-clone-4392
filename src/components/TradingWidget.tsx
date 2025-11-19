@@ -72,12 +72,11 @@ const TradingWidget = ({ symbol, companyName, priceInfo, tradeInfo }: TradingWid
   };
 
   return (
-    <Card className="border border-gray-200 shadow-sm bg-white">
-      <CardHeader className="pb-3 px-4 pt-4">
+    <Card className="border border-gray-200 shadow-sm bg-white rounded-lg">
+      <CardHeader className="pb-2 px-4 pt-4">
         <CardTitle className="text-base font-semibold text-gray-900">{companyName}</CardTitle>
-        <div className="text-xs text-gray-600 mt-1.5">
-          NSE ₹{currentPrice.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} · BSE ₹{bsePrice.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className={percentChange >= 0 ? "text-green-600" : "text-red-600"}>({percentChange >= 0 ? "+" : ""}{percentChange.toFixed(2)}%)</span>{" "}
-          <button className="text-primary hover:underline ml-1">Depth</button>
+        <div className="text-xs text-gray-600 mt-1">
+          NSE ₹{currentPrice.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className={percentChange >= 0 ? "text-green-600" : "text-red-600"}>({percentChange >= 0 ? "+" : ""}{percentChange.toFixed(2)}%)</span> · BSE ₹{bsePrice.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-primary hover:underline cursor-pointer ml-1">Depth</span>
         </div>
       </CardHeader>
       <CardContent className="space-y-4 pt-0 px-4 pb-4">
@@ -97,7 +96,7 @@ const TradingWidget = ({ symbol, companyName, priceInfo, tradeInfo }: TradingWid
               value="SELL" 
               className={`rounded-none border-b-2 transition-all h-10 px-4 text-sm font-medium ${
                 activeTab === "SELL" 
-                  ? "border-red-500 text-red-600 bg-transparent shadow-none" 
+                  ? "border-orange-500 text-orange-600 bg-transparent shadow-none" 
                   : "border-transparent text-gray-600 hover:text-gray-900"
               }`}
             >
@@ -106,16 +105,16 @@ const TradingWidget = ({ symbol, companyName, priceInfo, tradeInfo }: TradingWid
           </TabsList>
 
           <TabsContent value={activeTab} className="space-y-4 mt-4">
-            {/* Order Type Selection */}
+            {/* Order Type Selection - Match Groww style */}
             <div className="flex gap-2">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setOrderType("Delivery")}
-                className={`flex-1 h-9 text-sm font-normal border-gray-300 transition-all duration-200 ${
+                className={`flex-1 h-9 text-sm font-normal border-gray-300 rounded-md transition-all duration-200 ${
                   orderType === "Delivery" 
                     ? "bg-gray-900 text-white border-gray-900 hover:bg-gray-800" 
-                    : "bg-white text-gray-700 hover:bg-gray-50"
+                    : "bg-white text-gray-700 hover:bg-gray-50 border-gray-300"
                 }`}
               >
                 Delivery
@@ -124,10 +123,10 @@ const TradingWidget = ({ symbol, companyName, priceInfo, tradeInfo }: TradingWid
                 variant="outline"
                 size="sm"
                 onClick={() => setOrderType("Intraday")}
-                className={`flex-1 h-9 text-sm font-normal border-gray-300 transition-all duration-200 ${
+                className={`flex-1 h-9 text-sm font-normal border-gray-300 rounded-md transition-all duration-200 ${
                   orderType === "Intraday" 
                     ? "bg-gray-900 text-white border-gray-900 hover:bg-gray-800" 
-                    : "bg-white text-gray-700 hover:bg-gray-50"
+                    : "bg-white text-gray-700 hover:bg-gray-50 border-gray-300"
                 }`}
               >
                 Intraday
@@ -136,10 +135,10 @@ const TradingWidget = ({ symbol, companyName, priceInfo, tradeInfo }: TradingWid
                 variant="outline"
                 size="sm"
                 onClick={() => setOrderType("MTF")}
-                className={`flex-1 h-9 text-sm font-normal border-gray-300 transition-all duration-200 relative ${
+                className={`flex-1 h-9 text-sm font-normal border-gray-300 rounded-md transition-all duration-200 relative ${
                   orderType === "MTF" 
                     ? "bg-gray-900 text-white border-gray-900 hover:bg-gray-800" 
-                    : "bg-white text-gray-700 hover:bg-gray-50"
+                    : "bg-white text-gray-700 hover:bg-gray-50 border-gray-300"
                 }`}
               >
                 MTF {mtfMultiplier}x
@@ -214,24 +213,24 @@ const TradingWidget = ({ symbol, companyName, priceInfo, tradeInfo }: TradingWid
               </div>
             )}
 
-            {/* Balance and Requirement */}
+            {/* Balance and Requirement - Match Groww style */}
             <div className="space-y-2.5 pt-2 border-t border-gray-200">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Balance :</span>
-                <span className="font-medium text-gray-900">₹0</span>
+                <span className="text-gray-600">Balance:</span>
+                <span className="font-medium text-gray-900">₹25</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Approx req. :</span>
+                <span className="text-gray-600">Approx req.:</span>
                 <span className="font-medium text-gray-900">₹{formattedApproximateRequired}</span>
               </div>
             </div>
 
-            {/* Buy/Sell Button */}
+            {/* Buy/Sell Button - Match Groww style */}
             <Button
               className={`w-full h-12 text-base font-semibold rounded-md transition-all duration-200 ${
                 activeTab === "BUY" 
                   ? "bg-green-500 hover:bg-green-600 text-white shadow-sm hover:shadow-md" 
-                  : "bg-red-500 hover:bg-red-600 text-white shadow-sm hover:shadow-md"
+                  : "bg-orange-500 hover:bg-orange-600 text-white shadow-sm hover:shadow-md"
               }`}
               onClick={activeTab === "BUY" ? handleBuy : handleSell}
               size="lg"
