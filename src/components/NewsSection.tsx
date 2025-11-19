@@ -97,12 +97,16 @@ const NewsSection = () => {
   const getStockChange = async (symbol: string) => {
     try {
       const details = await api.getStockDetails(symbol);
+      if (!details) {
+        return { change: 0, changePercent: 0 };
+      }
       const priceInfo = details?.priceInfo || {};
       return {
         change: priceInfo.change || 0,
         changePercent: priceInfo.pChange || 0,
       };
     } catch (error) {
+      // Return default values without logging - expected when backend is unavailable
       return { change: 0, changePercent: 0 };
     }
   };
@@ -157,12 +161,15 @@ const NewsSection = () => {
           }
         }
         
-        const validNews = processedNews;
-        
-        setNews(validNews);
+        setNews(processedNews);
       } catch (err: any) {
-        setError(err?.message || "Failed to load news");
-        console.error("Error fetching news:", err);
+        // Don't set error state for expected failures (API unavailable)
+        // Just set empty news array
+        setNews([]);
+        // Only log unexpected errors
+        if (!err?.message?.includes("Network error") && !err?.message?.includes("404")) {
+          console.warn("Unexpected error fetching news:", err);
+        }
       } finally {
         setLoading(false);
       }

@@ -48,8 +48,11 @@ const Index = () => {
         setLoadingMostBought(true);
         // Fetch stock details for all symbols in parallel
         const stockPromises = MOST_BOUGHT_SYMBOLS.map(symbol => 
-          api.getStockDetails(symbol).catch((error) => {
-            console.warn(`Failed to fetch details for ${symbol}:`, error);
+          api.getStockDetails(symbol).catch((error: any) => {
+            // Only log if it's not a network/backend error (expected when backend is down)
+            if (error?.message && !error.message.includes('getaddrinfo') && !error.message.includes('ENOTFOUND')) {
+              console.warn(`Failed to fetch details for ${symbol}:`, error.message);
+            }
             return null;
           })
         );
@@ -58,7 +61,11 @@ const Index = () => {
         // Filter out error responses
         const validStockDetails = stockDetails.map((stock, index) => {
           if (stock && stock.error) {
-            console.warn(`API error for ${MOST_BOUGHT_SYMBOLS[index]}:`, stock.message || stock.error);
+            // Suppress expected backend errors
+            const errorMsg = stock.message || stock.error || '';
+            if (!errorMsg.includes('getaddrinfo') && !errorMsg.includes('ENOTFOUND')) {
+              console.warn(`API error for ${MOST_BOUGHT_SYMBOLS[index]}:`, errorMsg);
+            }
             return null;
           }
           return stock;
@@ -117,8 +124,12 @@ const Index = () => {
         const stocks: StockCardData[] = stocksData.filter((stock): stock is StockCardData => stock !== null);
 
         setMostBoughtStocks(stocks);
-      } catch (error) {
-        console.error("Error fetching most bought stocks:", error);
+      } catch (error: any) {
+        // Only log unexpected errors (not network/backend connection issues)
+        const errorMsg = error?.message || String(error || '');
+        if (!errorMsg.includes('getaddrinfo') && !errorMsg.includes('ENOTFOUND') && !errorMsg.includes('Network error') && !errorMsg.includes('API 400') && !errorMsg.includes('API 500')) {
+          console.error("Error fetching most bought stocks:", error);
+        }
         // Fallback to static data on error (only if we have no stocks)
         if (isMounted) {
           setMostBoughtStocks([
