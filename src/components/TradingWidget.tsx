@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Settings, HelpCircle, ChevronDown } from "lucide-react";
 import BuyDialog from "@/components/BuyDialog";
 import SellDialog from "@/components/SellDialog";
+import { useBalance } from "@/hooks/useBalance";
+import { VisibilityValue } from "@/hooks/useVisibility";
 
 interface TradingWidgetProps {
   symbol: string;
@@ -17,6 +19,7 @@ interface TradingWidgetProps {
 }
 
 const TradingWidget = ({ symbol, companyName, priceInfo, tradeInfo }: TradingWidgetProps) => {
+  const { balance } = useBalance();
   const [activeTab, setActiveTab] = useState<"BUY" | "SELL">("BUY");
   const [orderType, setOrderType] = useState<"Delivery" | "Intraday" | "MTF">("Delivery");
   const [quantity, setQuantity] = useState("");
@@ -219,11 +222,17 @@ const TradingWidget = ({ symbol, companyName, priceInfo, tradeInfo }: TradingWid
             <div className="space-y-2.5 pt-2 border-t border-gray-200">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Balance:</span>
-                <span className="font-medium text-gray-900">₹25</span>
+                <VisibilityValue 
+                  value={`₹${balance.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                  className="font-medium text-gray-900"
+                />
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Approx req.:</span>
-                <span className="font-medium text-gray-900">₹{formattedApproximateRequired}</span>
+                <VisibilityValue 
+                  value={`₹${formattedApproximateRequired}`}
+                  className="font-medium text-gray-900"
+                />
               </div>
             </div>
 

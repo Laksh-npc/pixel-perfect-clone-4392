@@ -4,9 +4,10 @@ import { useHoldings, Holding } from "@/hooks/useHoldings";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronDown, MoreVertical, Eye } from "lucide-react";
-import { LineChart, Line, ResponsiveContainer } from "recharts";
+import { ChevronDown, MoreVertical, Eye, EyeOff } from "lucide-react";
+import { LineChart, Line, ResponsiveContainer, Area, AreaChart } from "recharts";
 import { api } from "@/services/api";
+import { useVisibility, VisibilityValue } from "@/hooks/useVisibility";
 
 interface HoldingsViewProps {
   onStockSelect?: (symbol: string) => void;
@@ -15,6 +16,7 @@ interface HoldingsViewProps {
 const HoldingsView = ({ onStockSelect }: HoldingsViewProps) => {
   const { holdings, loading, getPortfolioSummary } = useHoldings();
   const navigate = useNavigate();
+  const { isVisible, toggleVisibility } = useVisibility();
   const [expanded, setExpanded] = useState(true);
   const [priceData, setPriceData] = useState<Record<string, any[]>>({});
 
@@ -115,43 +117,71 @@ const HoldingsView = ({ onStockSelect }: HoldingsViewProps) => {
             />
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-              <Eye className="w-4 h-4" />
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 w-8 p-0 hover:bg-gray-100"
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleVisibility();
+              }}
+            >
+              {isVisible ? <Eye className="w-4 h-4 text-gray-600" /> : <EyeOff className="w-4 h-4 text-gray-600" />}
             </Button>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-              <MoreVertical className="w-4 h-4" />
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-gray-100">
+              <MoreVertical className="w-4 h-4 text-gray-600" />
             </Button>
           </div>
         </div>
 
-        {/* Portfolio Summary - Match Groww style */}
-        <div className="mt-4 pt-4 border-t border-gray-200 space-y-3">
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-gray-600">Current value</span>
-            <span className="text-sm font-semibold text-gray-900">{formatCurrency(summary.currentValue)}</span>
+        {/* Portfolio Summary - Match Groww style exactly */}
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <div className="text-xs text-gray-600 mb-1">Current value</div>
+              <VisibilityValue 
+                value={formatCurrency(summary.currentValue)}
+                className="text-sm font-semibold text-gray-900"
+              />
+            </div>
+            <div className="text-right">
+              <div className="text-xs text-gray-600 mb-1">Invested value</div>
+              <VisibilityValue 
+                value={formatCurrency(summary.investedAmount)}
+                className="text-sm font-semibold text-gray-900"
+              />
+            </div>
           </div>
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-gray-600">Invested value</span>
-            <span className="text-sm font-semibold text-gray-900">{formatCurrency(summary.investedAmount)}</span>
-          </div>
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center mb-3">
             <span className="text-sm text-gray-600">1D returns</span>
             <span className={`text-sm font-semibold ${summary.oneDayReturns >= 0 ? "text-green-600" : "text-red-600"}`}>
-              {summary.oneDayReturns >= 0 ? "+" : ""}{formatCurrency(summary.oneDayReturns)} ({formatPercent(summary.oneDayReturnsPercent)})
+              {isVisible ? (
+                <>
+                  {summary.oneDayReturns >= 0 ? "+" : ""}{formatCurrency(summary.oneDayReturns)} ({formatPercent(summary.oneDayReturnsPercent)})
+                </>
+              ) : (
+                <span className="tracking-widest">••••••</span>
+              )}
             </span>
           </div>
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center mb-4">
             <span className="text-sm text-gray-600">Total returns</span>
             <span className={`text-sm font-semibold ${summary.totalReturns >= 0 ? "text-green-600" : "text-red-600"}`}>
-              {summary.totalReturns >= 0 ? "+" : ""}{formatCurrency(summary.totalReturns)} ({formatPercent(summary.totalReturnsPercent)})
+              {isVisible ? (
+                <>
+                  {summary.totalReturns >= 0 ? "+" : ""}{formatCurrency(summary.totalReturns)} ({formatPercent(summary.totalReturnsPercent)})
+                </>
+              ) : (
+                <span className="tracking-widest">••••••</span>
+              )}
             </span>
           </div>
-          <div className="flex items-center gap-2 pt-2">
-            <Button variant="outline" size="sm" className="flex-1 h-9 text-sm">
+          <div className="flex items-center gap-2 pt-2 border-t border-gray-200">
+            <Button variant="outline" size="sm" className="flex-1 h-9 text-sm font-normal border-gray-300 hover:bg-gray-50">
               Analyse
             </Button>
-            <Button variant="ghost" size="icon" className="h-9 w-9">
-              <MoreVertical className="w-4 h-4" />
+            <Button variant="ghost" size="icon" className="h-9 w-9 hover:bg-gray-100">
+              <MoreVertical className="w-4 h-4 text-gray-600" />
             </Button>
           </div>
         </div>
@@ -189,59 +219,80 @@ const HoldingsView = ({ onStockSelect }: HoldingsViewProps) => {
                       className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
                       onClick={() => handleStockClick(holding.symbol)}
                     >
-                      <td className="py-4 px-3">
+                      <td className="py-3 px-3">
                         <div className="flex items-start gap-3">
                           <div className="w-10 h-10 rounded bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                             {getCompanyLogo(holding.companyName)}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <div className="text-sm font-medium text-gray-900 mb-1">
+                            <div className="text-sm font-medium text-gray-900 mb-0.5">
                               {holding.companyName}
                             </div>
                             <div className="text-xs text-gray-600 mb-2">
-                              {holding.shares} shares • Avg. {formatCurrency(holding.avgPrice)}
+                              {holding.shares} shares • Avg. {isVisible ? formatCurrency(holding.avgPrice) : "••••"}
                             </div>
-                            {chartData.length > 0 && (
-                              <div className="w-24 h-6 mt-1">
-                                <ResponsiveContainer width="100%" height="100%">
-                                  <LineChart data={chartData} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
-                                    <Line
-                                      type="monotone"
-                                      dataKey="price"
-                                      stroke={isPositive ? "#10b981" : "#ef4444"}
-                                      strokeWidth={1.5}
-                                      dot={false}
-                                      isAnimationActive={false}
-                                    />
-                                  </LineChart>
-                                </ResponsiveContainer>
-                              </div>
-                            )}
                           </div>
                         </div>
                       </td>
-                      <td className="py-4 px-3">
-                        <div className="text-sm font-medium text-gray-900 mb-1">
-                          {formatCurrency(holding.currentPrice || 0)}
-                        </div>
-                        <div className={`text-xs font-medium ${isPositive ? "text-green-600" : "text-red-600"}`}>
-                          {oneDayChange >= 0 ? "+" : ""}{formatCurrency(oneDayChange)} ({oneDayChangePercent >= 0 ? "+" : ""}{oneDayChangePercent.toFixed(2)}%)
+                      <td className="py-3 px-3">
+                        <div className="flex items-center gap-2">
+                          {chartData.length > 0 && (
+                            <div className="w-16 h-6 flex-shrink-0">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={chartData} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+                                  <defs>
+                                    <linearGradient id={`gradient-${holding.symbol}`} x1="0" y1="0" x2="0" y2="1">
+                                      <stop offset="0%" stopColor={isPositive ? "#10b981" : "#ef4444"} stopOpacity={0.3} />
+                                      <stop offset="100%" stopColor={isPositive ? "#10b981" : "#ef4444"} stopOpacity={0} />
+                                    </linearGradient>
+                                  </defs>
+                                  <Area
+                                    type="monotone"
+                                    dataKey="price"
+                                    stroke={isPositive ? "#10b981" : "#ef4444"}
+                                    strokeWidth={1.5}
+                                    fill={`url(#gradient-${holding.symbol})`}
+                                    dot={false}
+                                    isAnimationActive={false}
+                                  />
+                                </AreaChart>
+                              </ResponsiveContainer>
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-gray-900 mb-0.5">
+                              <VisibilityValue value={formatCurrency(holding.currentPrice || 0)} />
+                            </div>
+                            <div className={`text-xs font-medium ${isPositive ? "text-green-600" : "text-red-600"}`}>
+                              {isVisible ? (
+                                <>
+                                  {oneDayChange >= 0 ? "+" : ""}{formatCurrency(Math.abs(oneDayChange))} ({oneDayChangePercent >= 0 ? "+" : ""}{oneDayChangePercent.toFixed(2)}%)
+                                </>
+                              ) : (
+                                <span className="tracking-widest">••••</span>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </td>
-                      <td className="py-4 px-3">
-                        <div className={`text-sm font-medium mb-1 ${returnsPositive ? "text-green-600" : "text-red-600"}`}>
-                          {returnsPositive ? "+" : ""}{formatCurrency(holding.returns || 0)}
+                      <td className="py-3 px-3">
+                        <div className={`text-sm font-medium mb-0.5 ${returnsPositive ? "text-green-600" : "text-red-600"}`}>
+                          {isVisible ? (
+                            <>{returnsPositive ? "+" : ""}{formatCurrency(holding.returns || 0)}</>
+                          ) : (
+                            <span className="tracking-widest">••••</span>
+                          )}
                         </div>
                         <div className={`text-xs font-medium ${returnsPositive ? "text-green-600" : "text-red-600"}`}>
-                          {formatPercent(holding.returnsPercent || 0)}
+                          {isVisible ? formatPercent(holding.returnsPercent || 0) : <span className="tracking-widest">••••</span>}
                         </div>
                       </td>
-                      <td className="py-4 px-3">
-                        <div className="text-sm font-medium text-gray-900 mb-1">
-                          {formatCurrency(holding.currentValue || 0)}
+                      <td className="py-3 px-3">
+                        <div className="text-sm font-medium text-gray-900 mb-0.5">
+                          <VisibilityValue value={formatCurrency(holding.currentValue || 0)} />
                         </div>
                         <div className="text-xs text-gray-600">
-                          {formatCurrency(holding.investedAmount)}
+                          <VisibilityValue value={formatCurrency(holding.investedAmount)} />
                         </div>
                       </td>
                     </tr>

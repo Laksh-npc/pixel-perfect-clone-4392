@@ -1,5 +1,6 @@
 import { useHoldings } from "@/hooks/useHoldings";
 import { useNavigate } from "react-router-dom";
+import { VisibilityValue } from "@/hooks/useVisibility";
 
 const InvestmentSummary = () => {
   const { getPortfolioSummary, loading } = useHoldings();
@@ -30,14 +31,20 @@ const InvestmentSummary = () => {
         {/* Current Value */}
         <div>
           <div className="text-sm text-gray-600 mb-1">Current</div>
-          <div className="text-2xl font-bold text-gray-900">{formatCurrency(summary.currentValue)}</div>
+          <VisibilityValue 
+            value={formatCurrency(summary.currentValue)}
+            className="text-2xl font-bold text-gray-900"
+          />
         </div>
 
         {/* 1D Returns */}
         <div className="flex justify-between items-center">
           <div className="text-sm text-gray-600">1D returns</div>
           <div className={`text-sm font-medium ${oneDayPositive ? "text-green-600" : "text-red-600"}`}>
-            {oneDayPositive ? "+" : ""}{formatCurrency(summary.oneDayReturns)} ({oneDayPositive ? "+" : ""}{formatPercent(summary.oneDayReturnsPercent)})
+            <VisibilityValue 
+              value={`${oneDayPositive ? "+" : ""}${formatCurrency(summary.oneDayReturns)} (${oneDayPositive ? "+" : ""}${formatPercent(summary.oneDayReturnsPercent)})`}
+              placeholder="••••••"
+            />
           </div>
         </div>
 
@@ -45,14 +52,20 @@ const InvestmentSummary = () => {
         <div className="flex justify-between items-center">
           <div className="text-sm text-gray-600">Total returns</div>
           <div className={`text-sm font-medium ${totalReturnsPositive ? "text-green-600" : "text-red-600"}`}>
-            {totalReturnsPositive ? "+" : ""}{formatCurrency(summary.totalReturns)} ({totalReturnsPositive ? "+" : ""}{formatPercent(summary.totalReturnsPercent)})
+            <VisibilityValue 
+              value={`${totalReturnsPositive ? "+" : ""}${formatCurrency(summary.totalReturns)} (${totalReturnsPositive ? "+" : ""}${formatPercent(summary.totalReturnsPercent)})`}
+              placeholder="••••••"
+            />
           </div>
         </div>
 
         {/* Invested Amount */}
         <div className="flex justify-between items-center">
           <div className="text-sm text-gray-600">Invested</div>
-          <div className="text-sm font-medium text-gray-900">{formatCurrency(summary.investedAmount)}</div>
+          <VisibilityValue 
+            value={formatCurrency(summary.investedAmount)}
+            className="text-sm font-medium text-gray-900"
+          />
         </div>
       </div>
     </div>

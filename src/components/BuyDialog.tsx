@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { X } from "lucide-react";
 import { useHoldings } from "@/hooks/useHoldings";
+import { useBalance } from "@/hooks/useBalance";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface BuyDialogProps {
@@ -23,6 +24,7 @@ interface BuyDialogProps {
 
 const BuyDialog = ({ open, onOpenChange, symbol, companyName, currentPrice, priceInfo }: BuyDialogProps) => {
   const { addHolding } = useHoldings();
+  const { balance } = useBalance();
   const [quantity, setQuantity] = useState("");
   const [orderType, setOrderType] = useState<"Delivery" | "Intraday">("Delivery");
   const [priceType, setPriceType] = useState<"Market" | "Limit">("Market");
@@ -36,7 +38,6 @@ const BuyDialog = ({ open, onOpenChange, symbol, companyName, currentPrice, pric
 
   const effectivePrice = priceType === "Market" ? currentPrice : parseFloat(limitPrice) || currentPrice;
   const totalAmount = quantity ? parseFloat(quantity) * effectivePrice : 0;
-  const balance = 25; // Mock balance
 
   const handleBuy = () => {
     if (!quantity || parseFloat(quantity) <= 0) return;

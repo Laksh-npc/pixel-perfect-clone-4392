@@ -5,18 +5,32 @@ import Footer from "@/components/Footer";
 import HoldingsView from "@/components/HoldingsView";
 import { Card, CardContent } from "@/components/ui/card";
 import { Eye } from "lucide-react";
+import { useBalance } from "@/hooks/useBalance";
+import { useVisibility, VisibilityValue } from "@/hooks/useVisibility";
+import AddMoneyDialog from "@/components/AddMoneyDialog";
+import Toast from "@/components/Toast";
 
 const Holdings = () => {
   const navigate = useNavigate();
+  const { balance } = useBalance();
+  const { isVisible } = useVisibility();
   const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
+  const [addMoneyOpen, setAddMoneyOpen] = useState(false);
+  const [toast, setToast] = useState<{ message: string } | null>(null);
 
   const handleStockSelect = (symbol: string) => {
     setSelectedSymbol(symbol);
     navigate(`/stock/${symbol}`);
   };
 
+  const handleAddMoneySuccess = (amount: number) => {
+    setToast({
+      message: `₹${amount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} has been added to your Groww balance.`,
+    });
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       <Header />
       
       <div className="container mx-auto px-4 py-6 max-w-7xl">
@@ -40,11 +54,19 @@ const Holdings = () => {
                     </div>
                   </div>
                   <div className="w-full pt-4 border-t border-gray-200">
-                    <div className="flex justify-between items-center text-sm">
+                    <div className="flex justify-between items-center text-sm mb-2">
                       <span className="text-gray-600">Balance:</span>
-                      <span className="font-medium text-gray-900">₹27.22</span>
+                      <VisibilityValue 
+                        value={`₹${balance.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                        className="font-medium text-gray-900"
+                      />
                     </div>
-                    <button className="text-primary hover:underline text-sm mt-2">Add money</button>
+                    <button 
+                      className="text-primary hover:underline text-sm"
+                      onClick={() => setAddMoneyOpen(true)}
+                    >
+                      Add money
+                    </button>
                   </div>
                 </div>
               </CardContent>
@@ -52,6 +74,19 @@ const Holdings = () => {
           </div>
         </div>
       </div>
+
+      <AddMoneyDialog 
+        open={addMoneyOpen} 
+        onOpenChange={setAddMoneyOpen}
+        onSuccess={handleAddMoneySuccess}
+      />
+
+      {toast && (
+        <Toast 
+          message={toast.message} 
+          onClose={() => setToast(null)}
+        />
+      )}
 
       <Footer />
     </div>
