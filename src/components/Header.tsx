@@ -2,11 +2,12 @@ import { Search, Bell, Globe, Network } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -67,8 +68,26 @@ const Header = () => {
       
       <div className="flex items-center justify-between px-6 border-t">
         <nav className="flex items-center gap-6">
-          <button className="py-3 border-b-2 border-primary font-medium text-foreground">Explore</button>
-          <button className="py-3 text-muted-foreground hover:text-foreground">Holdings</button>
+          <button 
+            onClick={() => navigate("/")}
+            className={`py-3 border-b-2 font-medium transition-colors ${
+              location.pathname === "/" 
+                ? "border-primary text-foreground" 
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Explore
+          </button>
+          <button 
+            onClick={() => navigate("/holdings")}
+            className={`py-3 border-b-2 font-medium transition-colors ${
+              location.pathname === "/holdings" 
+                ? "border-primary text-foreground" 
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Holdings
+          </button>
           <button className="py-3 text-muted-foreground hover:text-foreground">Positions</button>
           <button className="py-3 text-muted-foreground hover:text-foreground">Orders</button>
           <button className="py-3 text-muted-foreground hover:text-foreground">Watchlist</button>

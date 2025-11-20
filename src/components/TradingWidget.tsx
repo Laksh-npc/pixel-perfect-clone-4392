@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Settings, HelpCircle, ChevronDown } from "lucide-react";
+import BuyDialog from "@/components/BuyDialog";
+import SellDialog from "@/components/SellDialog";
 
 interface TradingWidgetProps {
   symbol: string;
@@ -20,6 +22,8 @@ const TradingWidget = ({ symbol, companyName, priceInfo, tradeInfo }: TradingWid
   const [quantity, setQuantity] = useState("");
   const [priceType, setPriceType] = useState<"Market" | "Limit">("Market");
   const [price, setPrice] = useState(priceInfo?.lastPrice?.toFixed(2) || "0");
+  const [buyDialogOpen, setBuyDialogOpen] = useState(false);
+  const [sellDialogOpen, setSellDialogOpen] = useState(false);
 
   // Calculate MTF multiplier (typically varies by stock, using a default calculation)
   const calculateMTFMultiplier = () => {
@@ -62,13 +66,11 @@ const TradingWidget = ({ symbol, companyName, priceInfo, tradeInfo }: TradingWid
     : approximateRequired.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const handleBuy = () => {
-    // Handle buy action
-    console.log("Buy order:", { symbol, quantity, priceType, price, orderType });
+    setBuyDialogOpen(true);
   };
 
   const handleSell = () => {
-    // Handle sell action
-    console.log("Sell order:", { symbol, quantity, priceType, price, orderType });
+    setSellDialogOpen(true);
   };
 
   return (
@@ -240,6 +242,24 @@ const TradingWidget = ({ symbol, companyName, priceInfo, tradeInfo }: TradingWid
           </TabsContent>
         </Tabs>
       </CardContent>
+
+      {/* Buy/Sell Dialogs */}
+      <BuyDialog
+        open={buyDialogOpen}
+        onOpenChange={setBuyDialogOpen}
+        symbol={symbol}
+        companyName={companyName}
+        currentPrice={currentPrice}
+        priceInfo={priceInfo}
+      />
+      <SellDialog
+        open={sellDialogOpen}
+        onOpenChange={setSellDialogOpen}
+        symbol={symbol}
+        companyName={companyName}
+        currentPrice={currentPrice}
+        priceInfo={priceInfo}
+      />
     </Card>
   );
 };
