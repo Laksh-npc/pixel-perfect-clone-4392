@@ -11,6 +11,7 @@ import MostBoughtStocks from "./pages/MostBoughtStocks";
 import Terminal from "./pages/Terminal";
 import DSFMAnalysis from "./pages/DSFMAnalysis";
 import Holdings from "./pages/Holdings";
+import SectorDetail from "./pages/SectorDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -68,6 +69,7 @@ const App = () => (
               <Route path="/most-bought-stocks" element={<MostBoughtStocks />} />
               <Route path="/dsfm-analysis" element={<DSFMAnalysis />} />
               <Route path="/holdings" element={<Holdings />} />
+              <Route path="/sector/:sectorName" element={<SectorDetail />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
