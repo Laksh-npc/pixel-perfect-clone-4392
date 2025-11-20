@@ -1,31 +1,40 @@
+import { Megaphone, Link2, BarChart3, Hourglass, FileText, CalendarCheck, Filter } from "lucide-react";
+import { cn } from "@/lib/utils";
+
 const ProductsTools = () => {
   const products = [
-    { name: "IPO", icon: "📢", badge: "4 open", badgeColor: "text-primary" },
-    { name: "Bonds", icon: "📊", badge: "1 open", badgeColor: "text-primary" },
-    { name: "ETF Screener", icon: "📈" },
-    { name: "Intraday Screener", icon: "⏱️" },
-    { name: "MTF stocks", icon: "📱" },
-    { name: "Events calendar", icon: "✅" },
-    { name: "All Stocks screener", icon: "🔍" },
+    { name: "IPO", icon: Megaphone, badge: "3 open", badgeColor: "text-green-600" },
+    { name: "Bonds", icon: Link2, badge: "1 open", badgeColor: "text-green-600" },
+    { name: "ETF Screener", icon: BarChart3 },
+    { name: "Intraday Screener", icon: Hourglass },
+    { name: "MTF stocks", icon: FileText },
+    { name: "Events calendar", icon: CalendarCheck },
+    { name: "All Stocks screener", icon: Filter },
   ];
 
   return (
-    <div className="border rounded-lg p-6 bg-card">
+    <div className="border rounded-lg p-6 bg-card shadow-sm">
       <h3 className="text-lg font-semibold mb-4">Products & Tools</h3>
-      <div className="space-y-3">
-        {products.map((product) => (
-          <div key={product.name} className="flex items-center justify-between py-2 hover:bg-secondary/50 -mx-2 px-2 rounded cursor-pointer">
-            <div className="flex items-center gap-3">
-              <span className="text-xl">{product.icon}</span>
-              <span className="text-sm font-medium">{product.name}</span>
+      <div className="space-y-0.5">
+        {products.map((product) => {
+          const IconComponent = product.icon;
+          return (
+            <div 
+              key={product.name} 
+              className="flex items-center justify-between py-2.5 px-2 -mx-2 rounded-md hover:bg-muted/50 cursor-pointer transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <IconComponent className="w-4 h-4 text-muted-foreground flex-shrink-0" strokeWidth={1.5} />
+                <span className="text-sm font-medium">{product.name}</span>
+              </div>
+              {product.badge && (
+                <span className={cn("text-xs font-medium", product.badgeColor)}>
+                  {product.badge}
+                </span>
+              )}
             </div>
-            {product.badge && (
-              <span className={`text-xs font-medium ${product.badgeColor}`}>
-                {product.badge}
-              </span>
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

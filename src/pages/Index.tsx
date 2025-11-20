@@ -9,6 +9,7 @@ import TradingScreens from "@/components/TradingScreens";
 import SectorsTrending from "@/components/SectorsTrending";
 import NewsSection from "@/components/NewsSection";
 import Footer from "@/components/Footer";
+import MarketMovers from "@/components/MarketMovers";
 import { api } from "@/services/api";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -206,7 +207,10 @@ const Index = () => {
               )}
             </section>
 
-            {/* Top market movers temporarily removed for demo */}
+            {/* Top market movers */}
+            <section>
+              <MarketMovers />
+            </section>
 
             <section>
               <h2 className="text-xl font-semibold mb-4">Most traded stocks in MTF</h2>

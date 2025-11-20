@@ -1,14 +1,18 @@
-export type UniverseKey = "NIFTY 100" | "NIFTY 500" | "NIFTY Midcap 100" | "NIFTY Smallcap 100" | "Nifty Total Market";
+export type UniverseKey = "NIFTY 50" | "NIFTY 100" | "NIFTY 500" | "NIFTY Midcap 100" | "NIFTY Smallcap 100" | "Nifty Total Market";
 
 // Minimal representative symbol sets; expand as needed
-const NIFTY_100 = [
+const NIFTY_50 = [
   "RELIANCE","TCS","HDFCBANK","INFY","ITC","HINDUNILVR","ICICIBANK","SBIN","LT","BHARTIARTL",
   "BAJFINANCE","BAJAJFINSV","KOTAKBANK","ASIANPAINT","MARUTI","SUNPHARMA","AXISBANK","NTPC","POWERGRID","ONGC",
 ];
 
+const NIFTY_100 = [
+  ...NIFTY_50,
+  "ADANIENT","ADANIPORTS","TATASTEEL","TITAN","ULTRACEMCO","EICHERMOT","COALINDIA","GRASIM","TECHM","PIDILITIND",
+];
+
 const NIFTY_500 = [
   ...NIFTY_100,
-  "ADANIENT","ADANIPORTS","TATASTEEL","TITAN","ULTRACEMCO","EICHERMOT","COALINDIA","GRASIM","TECHM","PIDILITIND",
 ];
 
 const MIDCAP_100 = [
@@ -26,6 +30,7 @@ const TOTAL_MARKET = [
 ];
 
 export const UNIVERSE_TO_SYMBOLS: Record<UniverseKey, string[]> = {
+  "NIFTY 50": NIFTY_50,
   "NIFTY 100": NIFTY_100,
   "NIFTY 500": NIFTY_500,
   "NIFTY Midcap 100": MIDCAP_100,
