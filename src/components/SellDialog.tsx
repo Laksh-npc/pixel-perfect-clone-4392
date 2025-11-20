@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { X, ChevronDown, Settings } from "lucide-react";
 import { useHoldings } from "@/hooks/useHoldings";
+import { useBalance } from "@/hooks/useBalance";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +25,7 @@ interface SellDialogProps {
 
 const SellDialog = ({ open, onOpenChange, symbol, companyName, currentPrice, priceInfo }: SellDialogProps) => {
   const { holdings, removeHolding } = useHoldings();
+  const { balance } = useBalance();
   const [quantity, setQuantity] = useState("");
   const [orderType, setOrderType] = useState<"Delivery" | "Intraday" | "MTF">("Delivery");
   const [priceType, setPriceType] = useState<"Market" | "Limit">("Limit");

@@ -77,6 +77,35 @@ export const api = {
 
   // Fetch equities for a list of symbols
   getEquitiesBySymbols: async (symbols: string[]) => {
+    // If empty symbols array, directly use fallback
+    if (symbols.length === 0) {
+      const FALLBACK_SYMBOLS = ["RELIANCE", "EICHERMOT", "BAJFINANCE", "BAJAJFINSV", "INFY", "TCS", "HDFCBANK"];
+      const fallbackPromises = FALLBACK_SYMBOLS.map(async (symbol) => {
+        try {
+          const stockDetails = await api.getStockDetails(symbol);
+          if (stockDetails && stockDetails.info && stockDetails.priceInfo) {
+            return {
+              symbol: symbol,
+              details: {
+                info: { companyName: stockDetails.info.companyName || symbol },
+                price: {
+                  last: stockDetails.priceInfo.lastPrice || 0,
+                  previousClose: (stockDetails.priceInfo.lastPrice || 0) - (stockDetails.priceInfo.change || 0),
+                  tradedQuantity: stockDetails.priceInfo.tradedQuantity || 0
+                }
+              }
+            };
+          }
+          return null;
+        } catch (error) {
+          return null;
+        }
+      });
+      
+      const fallbackResults = await Promise.all(fallbackPromises);
+      return fallbackResults.filter((e): e is any => e !== null);
+    }
+    
     try {
       const query = `
         query Movers($symbols: [String!]!) {
@@ -90,10 +119,67 @@ export const api = {
         }
       `;
       const data = await graphqlRequest<{ equities: any[] }>(query, { symbols });
-      return data.equities || [];
+      const equities = data.equities || [];
+      
+      // If API returns empty, use fallback symbols
+      if (equities.length === 0) {
+        const FALLBACK_SYMBOLS = ["RELIANCE", "EICHERMOT", "BAJFINANCE", "BAJAJFINSV", "INFY", "TCS", "HDFCBANK"];
+        // Fetch details for fallback symbols using REST API
+        const fallbackPromises = FALLBACK_SYMBOLS.map(async (symbol) => {
+          try {
+            const stockDetails = await api.getStockDetails(symbol);
+            if (stockDetails && stockDetails.info && stockDetails.priceInfo) {
+              return {
+                symbol: symbol,
+                details: {
+                  info: { companyName: stockDetails.info.companyName || symbol },
+                  price: {
+                    last: stockDetails.priceInfo.lastPrice || 0,
+                    previousClose: (stockDetails.priceInfo.lastPrice || 0) - (stockDetails.priceInfo.change || 0),
+                    tradedQuantity: stockDetails.priceInfo.tradedQuantity || 0
+                  }
+                }
+              };
+            }
+            return null;
+          } catch (error) {
+            return null;
+          }
+        });
+        
+        const fallbackResults = await Promise.all(fallbackPromises);
+        return fallbackResults.filter((e): e is any => e !== null);
+      }
+      
+      return equities;
     } catch (error) {
-      console.warn("Failed to fetch equities:", error);
-      return [];
+      console.warn("Failed to fetch equities, using fallback:", error);
+      // Use fallback symbols when API fails
+      const FALLBACK_SYMBOLS = ["RELIANCE", "EICHERMOT", "BAJFINANCE", "BAJAJFINSV", "INFY", "TCS", "HDFCBANK"];
+      const fallbackPromises = FALLBACK_SYMBOLS.map(async (symbol) => {
+        try {
+          const stockDetails = await api.getStockDetails(symbol);
+          if (stockDetails && stockDetails.info && stockDetails.priceInfo) {
+            return {
+              symbol: symbol,
+              details: {
+                info: { companyName: stockDetails.info.companyName || symbol },
+                price: {
+                  last: stockDetails.priceInfo.lastPrice || 0,
+                  previousClose: (stockDetails.priceInfo.lastPrice || 0) - (stockDetails.priceInfo.change || 0),
+                  tradedQuantity: stockDetails.priceInfo.tradedQuantity || 0
+                }
+              }
+            };
+          }
+          return null;
+        } catch (error) {
+          return null;
+        }
+      });
+      
+      const fallbackResults = await Promise.all(fallbackPromises);
+      return fallbackResults.filter((e): e is any => e !== null);
     }
   },
 
