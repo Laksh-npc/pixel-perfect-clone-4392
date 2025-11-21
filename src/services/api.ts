@@ -446,6 +446,54 @@ export const api = {
     }
     return similarStocks;
   },
+
+  // Search stocks by query
+  searchStocks: async (query: string, limit = 20) => {
+    if (!query || query.trim().length < 2) return [];
+    
+    try {
+      // Try to get all symbols from API first
+      let allSymbols: string[] = [];
+      try {
+        allSymbols = await api.fetchFromRest<string[]>('/api/allSymbols');
+      } catch (e) {
+        // Fallback to universe symbols if API fails
+        const { UNIVERSE_TO_SYMBOLS } = await import('@/lib/universes');
+        allSymbols = Object.values(UNIVERSE_TO_SYMBOLS).flat();
+      }
+      
+      const queryUpper = query.toUpperCase().trim();
+      const matchingSymbols = allSymbols
+        .filter(s => s.includes(queryUpper) || s === queryUpper)
+        .slice(0, limit);
+      
+      // Fetch details for matching symbols
+      const results = [];
+      for (const symbol of matchingSymbols) {
+        try {
+          const details = await api.getStockDetails(symbol);
+          if (details?.info?.companyName) {
+            const companyName = details.info.companyName.toUpperCase();
+            if (companyName.includes(queryUpper) || symbol.includes(queryUpper)) {
+              results.push({
+                symbol,
+                companyName: details.info.companyName,
+                type: "stock"
+              });
+            }
+          }
+        } catch (e) {
+          // Skip if error
+          continue;
+        }
+      }
+      
+      return results;
+    } catch (error) {
+      console.warn("Search error:", error);
+      return [];
+    }
+  },
 };
 
 export function getApiBaseUrl(): string {
