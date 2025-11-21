@@ -82,7 +82,9 @@ const Index = () => {
             }
 
             const priceInfo = stock.priceInfo || {};
-            const lastPrice = priceInfo.lastPrice || 0;
+            // Use lastPrice (same as StockDetail page) - this is the current/latest price
+            const lastPrice = priceInfo.lastPrice || priceInfo.close || 0;
+            // Use the API's calculated change and pChange (same as StockDetail page)
             const change = priceInfo.change || 0;
             const pChange = priceInfo.pChange || 0;
             const positive = change >= 0;
@@ -94,13 +96,13 @@ const Index = () => {
               return null;
             }
           
-            // Format price with Indian currency
+            // Format price with Indian currency (same format as StockDetail page)
             const formattedPrice = `₹${lastPrice.toLocaleString("en-IN", { 
               minimumFractionDigits: 2, 
               maximumFractionDigits: 2 
             })}`;
             
-            // Format change
+            // Format change (same format as StockDetail page)
             const formattedChange = `${change >= 0 ? "+" : ""}${change.toFixed(2)}`;
             const formattedPercent = `(${pChange >= 0 ? "+" : ""}${pChange.toFixed(2)}%)`;
             

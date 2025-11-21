@@ -46,9 +46,48 @@ const MarketMovers = () => {
       try {
         setLoading(true);
         setError(null);
+        
+        // For Gainers: Use specific stocks from the image
+        const gainerSymbols = ["MARUTI", "MAXHEALTH", "INDIGO", "M&M", "TATACONSUM", "UNITDSPR"];
+        
+        // For Losers: Fetch from universe and filter for losses (not more than 5%)
         const symbols = UNIVERSE_TO_SYMBOLS[universe as keyof typeof UNIVERSE_TO_SYMBOLS] || [];
         
-        // If no symbols from universe, still proceed to use fallback from API helper
+        // Fetch gainers data
+        const gainerPromises = gainerSymbols.map(symbol => 
+          api.getStockDetails(symbol).catch(() => null)
+        );
+        const gainerDetails = await Promise.all(gainerPromises);
+        
+        // Convert gainer details to rows
+        const gainerRows = gainerDetails
+          .map((stock, index) => {
+            if (!stock || !stock.priceInfo || !stock.info) return null;
+            const priceInfo = stock.priceInfo;
+            const info = stock.info;
+            const last = Number(priceInfo.lastPrice || 0);
+            const prev = Number(priceInfo.previousClose || last);
+            const volume = Number(priceInfo.tradedQuantity || 0);
+            // Use API's calculated change and pChange (same as StockDetail page)
+            const changeAbs = Number(priceInfo.change || 0);
+            const changePct = Number(priceInfo.pChange || 0);
+            
+            // Only include if positive change (gainers)
+            if (changePct <= 0 || last <= 0) return null;
+            
+            return {
+              symbol: info.symbol || gainerSymbols[index],
+              name: info.companyName || gainerSymbols[index],
+              last,
+              prev,
+              volume,
+              changeAbs,
+              changePct,
+            };
+          })
+          .filter((r): r is any => r !== null);
+        
+        // Fetch losers data from universe
         const chunkSize = 80;
         const chunks: string[][] = [];
         if (symbols.length > 0) {
@@ -56,7 +95,6 @@ const MarketMovers = () => {
             chunks.push(symbols.slice(i, i + chunkSize));
           }
         } else {
-          // Empty chunk to trigger fallback
           chunks.push([]);
         }
         
@@ -64,16 +102,21 @@ const MarketMovers = () => {
           chunks.map(c => api.getEquitiesBySymbols(c.length > 0 ? c : []).catch(() => []))
         );
         const equities = responses.flat().filter(e => e && e.symbol);
-        const rows = toRows(equities);
+        const allRows = toRows(equities);
         
-        // Filter out rows with invalid data
-        const validRows = rows.filter(r => r.symbol && r.name && r.last > 0);
+        // Filter losers: only negative change, but not more than 5% loss
+        const loserRows = allRows.filter(r => {
+          return r.symbol && r.name && r.last > 0 && r.changePct < 0 && r.changePct >= -5;
+        });
         
-        // Always show 6-7 stocks
-        const g = [...validRows]
+        // Filter volume shockers
+        const validRows = allRows.filter(r => r.symbol && r.name && r.last > 0);
+        
+        // Sort and limit
+        const g = [...gainerRows]
           .sort((a, b) => b.changePct - a.changePct)
           .slice(0, 7);
-        const l = [...validRows]
+        const l = [...loserRows]
           .sort((a, b) => a.changePct - b.changePct)
           .slice(0, 7);
         const v = [...validRows]
