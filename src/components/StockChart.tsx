@@ -257,9 +257,9 @@ const StockChart = ({ symbol }: StockChartProps) => {
       // Handle both numeric timestamp and Date object
       const dateValue = typeof label === 'number' ? new Date(label) : (label instanceof Date ? label : new Date(label));
       return (
-        <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3">
-          <p className="text-xs text-gray-600 mb-1">{format(dateValue, dateFormat)}</p>
-          <p className={`text-sm font-semibold ${isPositive ? "text-green-600" : "text-red-600"}`}>
+        <div className="bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-800 rounded-lg shadow-lg p-3">
+          <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">{format(dateValue, dateFormat)}</p>
+          <p className={`text-sm font-semibold ${isPositive ? "text-green-600 dark:text-green-500" : "text-red-600 dark:text-red-500"}`}>
             ₹{Number(payload[0].value).toFixed(2)}
           </p>
         </div>
@@ -303,7 +303,7 @@ const StockChart = ({ symbol }: StockChartProps) => {
   }
 
   return (
-    <div className="border border-gray-200 rounded-lg bg-white p-6 shadow-sm">
+    <div className="border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-[#1a1a1a] p-6 shadow-sm">
       <div className="mb-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex gap-1.5 flex-wrap">
@@ -316,7 +316,7 @@ const StockChart = ({ symbol }: StockChartProps) => {
                 className={`h-8 px-3 text-sm font-medium transition-all duration-200 ${
                   selectedPeriod === period.value
                     ? "bg-primary text-white hover:bg-primary/90 shadow-sm"
-                    : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
                 }`}
               >
                 {period.label}
@@ -324,13 +324,13 @@ const StockChart = ({ symbol }: StockChartProps) => {
             ))}
           </div>
           <div className="flex gap-2">
-            <Button variant="ghost" size="sm" className="h-8 text-gray-600 hover:bg-gray-100 transition-colors duration-200">
+            <Button variant="ghost" size="sm" className="h-8 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200">
               <BarChart3 className="w-4 h-4" />
             </Button>
             <Button 
               variant="ghost" 
               size="sm" 
-              className="h-8 text-gray-600 hover:bg-gray-100 transition-colors duration-200"
+              className="h-8 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200"
               onClick={() => navigate(`/terminal/${symbol}`)}
             >
               Terminal
@@ -351,13 +351,13 @@ const StockChart = ({ symbol }: StockChartProps) => {
                 <stop offset="100%" stopColor={isPositive ? "#10b981" : "#ef4444"} stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" vertical={false} />
             <XAxis
               dataKey="date"
               type="number"
               scale="time"
               domain={['dataMin', 'dataMax']}
-              tick={selectedPeriod === "1D" ? { fontSize: 11, fill: "#666" } : { fontSize: 11, fill: "#666" }}
+              tick={selectedPeriod === "1D" ? { fontSize: 11, fill: "hsl(var(--muted-foreground))" } : { fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
               tickFormatter={(value) => formatXAxis(value, selectedPeriod)}
               axisLine={false}
             />

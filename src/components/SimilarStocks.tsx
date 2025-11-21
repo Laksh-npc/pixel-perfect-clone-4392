@@ -132,17 +132,17 @@ const SimilarStocks = ({ symbol, currentStockName }: SimilarStocksProps) => {
   }
 
   return (
-    <Card className="border-gray-200 shadow-sm">
+    <Card className="border-gray-200 dark:border-gray-800 shadow-sm bg-card dark:bg-[#1a1a1a]">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base font-semibold text-gray-900">Similar Stocks</CardTitle>
+        <CardTitle className="text-base font-semibold text-gray-900 dark:text-white">Similar Stocks</CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b">
-                <th className="text-left py-2 px-4 font-medium">COMPANY</th>
-                <th className="text-left py-2 px-4 font-medium">
+              <tr className="border-b border-gray-200 dark:border-gray-800">
+                <th className="text-left py-2 px-4 font-medium text-gray-900 dark:text-white">COMPANY</th>
+                <th className="text-left py-2 px-4 font-medium text-gray-900 dark:text-white">
                   <button
                     onClick={() => handleSort("52W")}
                     className="flex items-center gap-1 hover:text-primary"
@@ -153,8 +153,8 @@ const SimilarStocks = ({ symbol, currentStockName }: SimilarStocksProps) => {
                     )}
                   </button>
                 </th>
-                <th className="text-left py-2 px-4 font-medium">MARKET PRICE</th>
-                <th className="text-left py-2 px-4 font-medium">
+                <th className="text-left py-2 px-4 font-medium text-gray-900 dark:text-white">MARKET PRICE</th>
+                <th className="text-left py-2 px-4 font-medium text-gray-900 dark:text-white">
                   <button
                     onClick={() => handleSort("PE")}
                     className="flex items-center gap-1 hover:text-primary"
@@ -165,7 +165,7 @@ const SimilarStocks = ({ symbol, currentStockName }: SimilarStocksProps) => {
                     )}
                   </button>
                 </th>
-                <th className="text-left py-2 px-4 font-medium"></th>
+                <th className="text-left py-2 px-4 font-medium text-gray-900 dark:text-white"></th>
               </tr>
             </thead>
             <tbody>
@@ -184,26 +184,26 @@ const SimilarStocks = ({ symbol, currentStockName }: SimilarStocksProps) => {
                 return (
                   <tr
                     key={index}
-                    className="border-b hover:bg-muted/50 cursor-pointer"
+                    className="border-b border-gray-200 dark:border-gray-800 hover:bg-muted/50 dark:hover:bg-gray-800/50 cursor-pointer"
                     onClick={() => stockSymbol && navigate(`/stock/${stockSymbol}`)}
                   >
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded bg-secondary flex items-center justify-center text-xs font-bold">
+                        <div className="w-8 h-8 rounded bg-secondary dark:bg-gray-800 flex items-center justify-center text-xs font-bold">
                           {getCompanyLogo(info.companyName || stock.symbol)}
                         </div>
-                        <span className="font-medium text-sm">{info.companyName || stock.symbol}</span>
+                        <span className="font-medium text-sm text-gray-900 dark:text-white">{info.companyName || stock.symbol}</span>
                       </div>
                     </td>
                     <td className="py-3 px-4">
-                      <div className="relative w-24 h-2 bg-muted rounded-full">
+                      <div className="relative w-24 h-2 bg-muted dark:bg-gray-800 rounded-full">
                         <div
-                          className="absolute h-2 bg-primary rounded-full"
+                          className="absolute h-2 bg-primary dark:bg-primary rounded-full"
                           style={{ width: `${week52Position}%` }}
                         />
                         <div
                           className={`absolute w-0 h-0 border-l-[4px] border-r-[4px] border-t-[6px] border-transparent ${
-                            isPositive ? "border-t-green-600" : "border-t-red-600"
+                            isPositive ? "border-t-green-600 dark:border-t-green-500" : "border-t-red-600 dark:border-t-red-500"
                           }`}
                           style={{ left: `calc(${week52Position}% - 4px)`, top: "-8px" }}
                         />
@@ -211,15 +211,15 @@ const SimilarStocks = ({ symbol, currentStockName }: SimilarStocksProps) => {
                     </td>
                     <td className="py-3 px-4">
                       <div>
-                        <div className="font-medium">₹{currentPrice.toFixed(2)}</div>
-                        <div className={`text-sm ${isPositive ? "text-green-600" : "text-red-600"}`}>
+                        <div className="font-medium text-gray-900 dark:text-white">₹{currentPrice.toFixed(2)}</div>
+                        <div className={`text-sm ${isPositive ? "text-green-600 dark:text-green-500" : "text-red-600 dark:text-red-500"}`}>
                           {isPositive ? "+" : ""}
                           {percentChange.toFixed(2)}%
                         </div>
                       </div>
                     </td>
                     <td className="py-3 px-4">
-                      <div className="font-medium">{peRatio > 0 ? peRatio.toFixed(2) : 'N/A'}</div>
+                      <div className="font-medium text-gray-900 dark:text-white">{peRatio > 0 ? peRatio.toFixed(2) : 'N/A'}</div>
                     </td>
                     <td className="py-3 px-4">
                       <button

@@ -30,7 +30,7 @@ const Holdings = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-[#1a1a1a]">
       <Header />
       
       <div className="container mx-auto px-4 py-6 max-w-7xl">
@@ -42,23 +42,23 @@ const Holdings = () => {
 
           {/* Right Column - Placeholder - Match Groww */}
           <div className="lg:sticky lg:top-4 h-fit">
-            <Card className="border-gray-200 shadow-sm bg-white rounded-lg">
+            <Card className="border-gray-200 dark:border-gray-800 shadow-sm bg-white dark:bg-[#1a1a1a] rounded-lg">
               <CardContent className="p-6">
                 <div className="flex flex-col items-center justify-center min-h-[300px] space-y-4">
-                  <div className="w-16 h-16 mx-auto mb-2 rounded-lg bg-gray-100 flex items-center justify-center">
-                    <Eye className="w-8 h-8 text-gray-400" />
+                  <div className="w-16 h-16 mx-auto mb-2 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                    <Eye className="w-8 h-8 text-gray-400 dark:text-gray-500" />
                   </div>
                   <div className="w-full">
-                    <div className="bg-green-50 border-2 border-dashed border-green-200 rounded-lg p-4 mb-4 cursor-pointer hover:bg-green-100 transition-colors">
-                      <p className="text-sm text-gray-600 text-center">Select a stock to get started</p>
+                    <div className="bg-green-50 dark:bg-green-900/20 border-2 border-dashed border-green-200 dark:border-green-800 rounded-lg p-4 mb-4 cursor-pointer hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors">
+                      <p className="text-sm text-gray-600 dark:text-gray-400 text-center">Select a stock to get started</p>
                     </div>
                   </div>
-                  <div className="w-full pt-4 border-t border-gray-200">
+                  <div className="w-full pt-4 border-t border-gray-200 dark:border-gray-800">
                     <div className="flex justify-between items-center text-sm mb-2">
-                      <span className="text-gray-600">Balance:</span>
+                      <span className="text-gray-600 dark:text-gray-400">Balance:</span>
                       <VisibilityValue 
                         value={`₹${balance.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                        className="font-medium text-gray-900"
+                        className="font-medium text-gray-900 dark:text-white"
                       />
                     </div>
                     <button 

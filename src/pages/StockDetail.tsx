@@ -123,10 +123,10 @@ const StockDetail = () => {
           {/* Left Column - Main Content */}
           <div className="lg:col-span-2 space-y-4">
             {/* Stock Header - Match Groww style */}
-            <div className="pb-2 border-b border-gray-200">
-              <h1 className="text-lg font-semibold text-gray-900 mb-1">{info.companyName || symbol}</h1>
-              <div className="text-sm text-gray-600">
-                NSE ₹{currentPrice.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className={isPositive ? "text-green-600" : "text-red-600"}>({isPositive ? "+" : ""}{percentChange.toFixed(2)}%)</span> · BSE ₹{currentPrice.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-primary hover:underline cursor-pointer">Depth</span>
+            <div className="pb-2 border-b border-gray-200 dark:border-gray-800">
+              <h1 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">{info.companyName || symbol}</h1>
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                NSE ₹{currentPrice.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className={isPositive ? "text-green-600 dark:text-green-500" : "text-red-600 dark:text-red-500"}>({isPositive ? "+" : ""}{percentChange.toFixed(2)}%)</span> · BSE ₹{currentPrice.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-primary hover:underline cursor-pointer">Depth</span>
               </div>
             </div>
 
@@ -136,7 +136,7 @@ const StockDetail = () => {
                 variant="outline" 
                 size="sm" 
                 onClick={() => setAlertDialogOpen(true)}
-                className="h-9 px-4 border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
+                className="h-9 px-4 border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-gray-400 dark:hover:border-gray-600 transition-all duration-200 text-gray-700 dark:text-gray-300"
               >
                 <Clock className="w-4 h-4 mr-2" />
                 Create Alert
@@ -144,7 +144,7 @@ const StockDetail = () => {
               <Button 
                 variant="outline" 
                 size="sm"
-                className="h-9 px-4 border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
+                className="h-9 px-4 border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-gray-400 dark:hover:border-gray-600 transition-all duration-200 text-gray-700 dark:text-gray-300"
               >
                 <Bookmark className="w-4 h-4 mr-2" />
                 Watchlist
@@ -155,47 +155,47 @@ const StockDetail = () => {
             <StockChart symbol={symbol!} />
 
             {/* Create Stock SIP Section */}
-            <Card className="border-gray-200 hover:shadow-md transition-all duration-200 cursor-pointer group">
+            <Card className="border-gray-200 dark:border-gray-800 hover:shadow-md transition-all duration-200 cursor-pointer group bg-card dark:bg-[#1a1a1a]">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-md bg-gray-100 flex items-center justify-center group-hover:bg-gray-200 transition-colors">
-                      <Calendar className="w-5 h-5 text-gray-600" />
+                    <div className="w-10 h-10 rounded-md bg-gray-100 dark:bg-gray-800 flex items-center justify-center group-hover:bg-gray-200 dark:group-hover:bg-gray-700 transition-colors">
+                      <Calendar className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-gray-900 group-hover:text-primary transition-colors">Create Stock SIP</h3>
-                      <p className="text-sm text-gray-600">Automate your investments in this Stock.</p>
+                      <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-primary transition-colors">Create Stock SIP</h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Automate your investments in this Stock.</p>
                     </div>
                   </div>
-                  <ChevronUp className="w-5 h-5 text-gray-400 rotate-90 group-hover:text-gray-600 transition-colors" />
+                  <ChevronUp className="w-5 h-5 text-gray-400 dark:text-gray-500 rotate-90 group-hover:text-gray-600 dark:group-hover:text-gray-400 transition-colors" />
                 </div>
               </CardContent>
             </Card>
 
             {/* Tabs for Overview/News/Events/F&O - Match Groww style */}
             <Tabs defaultValue="overview" className="w-full">
-              <TabsList className="h-10 bg-transparent p-0 border-b border-gray-200 rounded-none gap-0">
+              <TabsList className="h-10 bg-transparent p-0 border-b border-gray-200 dark:border-gray-800 rounded-none gap-0">
                 <TabsTrigger 
                   value="overview" 
-                  className="px-4 py-2 text-sm font-medium data-[state=active]:border-b-2 data-[state=active]:border-green-500 data-[state=active]:text-green-600 data-[state=active]:bg-transparent rounded-none hover:text-gray-900 transition-colors duration-200"
+                  className="px-4 py-2 text-sm font-medium data-[state=active]:border-b-2 data-[state=active]:border-green-500 data-[state=active]:text-green-600 dark:data-[state=active]:text-green-500 data-[state=active]:bg-transparent rounded-none hover:text-gray-900 dark:hover:text-white text-gray-600 dark:text-gray-400 transition-colors duration-200"
                 >
                   Overview
                 </TabsTrigger>
                 <TabsTrigger 
                   value="news" 
-                  className="px-4 py-2 text-sm font-medium data-[state=active]:border-b-2 data-[state=active]:border-green-500 data-[state=active]:text-green-600 data-[state=active]:bg-transparent rounded-none hover:text-gray-900 transition-colors duration-200"
+                  className="px-4 py-2 text-sm font-medium data-[state=active]:border-b-2 data-[state=active]:border-green-500 data-[state=active]:text-green-600 dark:data-[state=active]:text-green-500 data-[state=active]:bg-transparent rounded-none hover:text-gray-900 dark:hover:text-white text-gray-600 dark:text-gray-400 transition-colors duration-200"
                 >
                   News
                 </TabsTrigger>
                 <TabsTrigger 
                   value="events" 
-                  className="px-4 py-2 text-sm font-medium data-[state=active]:border-b-2 data-[state=active]:border-green-500 data-[state=active]:text-green-600 data-[state=active]:bg-transparent rounded-none hover:text-gray-900 transition-colors duration-200"
+                  className="px-4 py-2 text-sm font-medium data-[state=active]:border-b-2 data-[state=active]:border-green-500 data-[state=active]:text-green-600 dark:data-[state=active]:text-green-500 data-[state=active]:bg-transparent rounded-none hover:text-gray-900 dark:hover:text-white text-gray-600 dark:text-gray-400 transition-colors duration-200"
                 >
                   Events
                 </TabsTrigger>
                 <TabsTrigger 
                   value="fno" 
-                  className="px-4 py-2 text-sm font-medium data-[state=active]:border-b-2 data-[state=active]:border-green-500 data-[state=active]:text-green-600 data-[state=active]:bg-transparent rounded-none hover:text-gray-900 transition-colors duration-200"
+                  className="px-4 py-2 text-sm font-medium data-[state=active]:border-b-2 data-[state=active]:border-green-500 data-[state=active]:text-green-600 dark:data-[state=active]:text-green-500 data-[state=active]:bg-transparent rounded-none hover:text-gray-900 dark:hover:text-white text-gray-600 dark:text-gray-400 transition-colors duration-200"
                 >
                   F&O
                 </TabsTrigger>

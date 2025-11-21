@@ -39,12 +39,12 @@ const Fundamentals = ({ stockDetails, corporateInfo }: FundamentalsProps) => {
   };
 
   return (
-    <Card className="border-gray-200 shadow-sm">
+    <Card className="border-gray-200 dark:border-gray-800 shadow-sm bg-card dark:bg-[#1a1a1a]">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <CardTitle className="text-base font-semibold text-gray-900">Fundamentals</CardTitle>
-            <InfoIcon className="w-4 h-4 text-gray-500" />
+            <CardTitle className="text-base font-semibold text-gray-900 dark:text-white">Fundamentals</CardTitle>
+            <InfoIcon className="w-4 h-4 text-gray-500 dark:text-gray-400" />
           </div>
           <Button variant="link" className="text-primary text-sm p-0 h-auto font-normal">
             Understand Fundamentals <InfoIcon className="w-4 h-4 ml-1 inline" />
@@ -54,46 +54,46 @@ const Fundamentals = ({ stockDetails, corporateInfo }: FundamentalsProps) => {
       <CardContent className="pt-0">
         <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
           <div>
-            <div className="text-sm text-gray-600 mb-1">Market Cap</div>
-            <div className="text-sm font-medium text-gray-900">₹{formatMarketCap(marketCap)}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Market Cap</div>
+            <div className="text-sm font-medium text-gray-900 dark:text-white">₹{formatMarketCap(marketCap)}</div>
           </div>
           <div>
-            <div className="text-sm text-gray-600 mb-1">P/E Ratio(TTM)</div>
-            <div className="text-sm font-medium text-gray-900">{peRatio.toFixed(2)}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">P/E Ratio(TTM)</div>
+            <div className="text-sm font-medium text-gray-900 dark:text-white">{peRatio.toFixed(2)}</div>
           </div>
           <div>
-            <div className="text-sm text-gray-600 mb-1">P/B Ratio</div>
-            <div className="text-sm font-medium text-gray-900">{pbRatio.toFixed(2)}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">P/B Ratio</div>
+            <div className="text-sm font-medium text-gray-900 dark:text-white">{pbRatio.toFixed(2)}</div>
           </div>
           <div>
-            <div className="text-sm text-gray-600 mb-1">Industry P/E</div>
-            <div className="text-sm font-medium text-gray-900">{industryPE.toFixed(2)}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Industry P/E</div>
+            <div className="text-sm font-medium text-gray-900 dark:text-white">{industryPE.toFixed(2)}</div>
           </div>
           <div>
-            <div className="text-sm text-gray-600 mb-1">Debt to Equity</div>
-            <div className="text-sm font-medium text-gray-900">{debtToEquity.toFixed(2)}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Debt to Equity</div>
+            <div className="text-sm font-medium text-gray-900 dark:text-white">{debtToEquity.toFixed(2)}</div>
           </div>
           <div>
-            <div className="text-sm text-gray-600 mb-1">ROE</div>
-            <div className={`text-sm font-medium ${roe < 0 ? "text-red-600" : "text-gray-900"}`}>
+            <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">ROE</div>
+            <div className={`text-sm font-medium ${roe < 0 ? "text-red-600 dark:text-red-500" : "text-gray-900 dark:text-white"}`}>
               {roe.toFixed(2)}%
             </div>
           </div>
           <div>
-            <div className="text-sm text-gray-600 mb-1">EPS(TTM)</div>
-            <div className="text-sm font-medium text-gray-900">{eps.toFixed(2)}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">EPS(TTM)</div>
+            <div className="text-sm font-medium text-gray-900 dark:text-white">{eps.toFixed(2)}</div>
           </div>
           <div>
-            <div className="text-sm text-gray-600 mb-1">Dividend Yield</div>
-            <div className="text-sm font-medium text-gray-900">{dividendYield.toFixed(2)}%</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Dividend Yield</div>
+            <div className="text-sm font-medium text-gray-900 dark:text-white">{dividendYield.toFixed(2)}%</div>
           </div>
           <div>
-            <div className="text-sm text-gray-600 mb-1">Book Value</div>
-            <div className="text-sm font-medium text-gray-900">{bookValue.toFixed(2)}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Book Value</div>
+            <div className="text-sm font-medium text-gray-900 dark:text-white">{bookValue.toFixed(2)}</div>
           </div>
           <div>
-            <div className="text-sm text-gray-600 mb-1">Face Value</div>
-            <div className="text-sm font-medium text-gray-900">{faceValue}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Face Value</div>
+            <div className="text-sm font-medium text-gray-900 dark:text-white">{faceValue}</div>
           </div>
         </div>
       </CardContent>

@@ -21,12 +21,12 @@ const AboutCompany = ({ stockDetails, corporateInfo }: AboutCompanyProps) => {
   const shouldTruncate = fullDescription.length > 200;
 
   return (
-    <Card className="border-gray-200 shadow-sm">
+    <Card className="border-gray-200 dark:border-gray-800 shadow-sm bg-card dark:bg-[#1a1a1a]">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base font-semibold text-gray-900">About {info.companyName || "Company"}</CardTitle>
+        <CardTitle className="text-base font-semibold text-gray-900 dark:text-white">About {info.companyName || "Company"}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4 pt-0">
-        <p className="text-sm text-gray-600 leading-relaxed">
+        <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
           {expanded || !shouldTruncate ? fullDescription : `${shortDescription}...`}
           {shouldTruncate && (
             <button
@@ -38,18 +38,18 @@ const AboutCompany = ({ stockDetails, corporateInfo }: AboutCompanyProps) => {
           )}
         </p>
 
-        <div className="pt-4 border-t border-gray-200 space-y-3">
+        <div className="pt-4 border-t border-gray-200 dark:border-gray-800 space-y-3">
           <div className="flex justify-between">
-            <span className="text-sm text-gray-600">Parent Organisation</span>
-            <span className="text-sm font-medium text-gray-900">{info.companyName || "N/A"}</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">Parent Organisation</span>
+            <span className="text-sm font-medium text-gray-900 dark:text-white">{info.companyName || "N/A"}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-sm text-gray-600">NSE Symbol</span>
-            <span className="text-sm font-medium text-gray-900">{info.symbol || metadata.symbol || "N/A"}</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">NSE Symbol</span>
+            <span className="text-sm font-medium text-gray-900 dark:text-white">{info.symbol || metadata.symbol || "N/A"}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-sm text-gray-600">Managing Director</span>
-            <span className="text-sm font-medium text-gray-900">Mr. Ravinder Takkar</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">Managing Director</span>
+            <span className="text-sm font-medium text-gray-900 dark:text-white">Mr. Ravinder Takkar</span>
           </div>
         </div>
       </CardContent>

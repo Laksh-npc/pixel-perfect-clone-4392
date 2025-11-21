@@ -80,17 +80,17 @@ const Financials = ({ corporateInfo }: FinancialsProps) => {
   };
 
   return (
-    <Card className="border-gray-200 shadow-sm">
+    <Card className="border-gray-200 dark:border-gray-800 shadow-sm bg-card dark:bg-[#1a1a1a]">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base font-semibold text-gray-900">Financials</CardTitle>
-        <p className="text-xs text-gray-600 mt-1">*All values are in Rs. Cr</p>
+        <CardTitle className="text-base font-semibold text-gray-900 dark:text-white">Financials</CardTitle>
+        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">*All values are in Rs. Cr</p>
       </CardHeader>
       <CardContent className="pt-0">
         <Tabs value={selectedTab} onValueChange={(v) => setSelectedTab(v as any)}>
-          <TabsList className="grid w-full grid-cols-3 h-10 bg-transparent p-0 border-b border-gray-200 rounded-none">
-            <TabsTrigger value="Revenue" className="data-[state=active]:border-b-2 data-[state=active]:border-green-500 data-[state=active]:text-green-600 rounded-none">Revenue</TabsTrigger>
-            <TabsTrigger value="Profit" className="data-[state=active]:border-b-2 data-[state=active]:border-green-500 data-[state=active]:text-green-600 rounded-none">Profit</TabsTrigger>
-            <TabsTrigger value="Net Worth" className="data-[state=active]:border-b-2 data-[state=active]:border-green-500 data-[state=active]:text-green-600 rounded-none">Net Worth</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3 h-10 bg-transparent p-0 border-b border-gray-200 dark:border-gray-800 rounded-none">
+            <TabsTrigger value="Revenue" className="data-[state=active]:border-b-2 data-[state=active]:border-green-500 data-[state=active]:text-green-600 dark:data-[state=active]:text-green-500 rounded-none text-gray-600 dark:text-gray-400">Revenue</TabsTrigger>
+            <TabsTrigger value="Profit" className="data-[state=active]:border-b-2 data-[state=active]:border-green-500 data-[state=active]:text-green-600 dark:data-[state=active]:text-green-500 rounded-none text-gray-600 dark:text-gray-400">Profit</TabsTrigger>
+            <TabsTrigger value="Net Worth" className="data-[state=active]:border-b-2 data-[state=active]:border-green-500 data-[state=active]:text-green-600 dark:data-[state=active]:text-green-500 rounded-none text-gray-600 dark:text-gray-400">Net Worth</TabsTrigger>
           </TabsList>
 
           <TabsContent value={selectedTab} className="mt-6">

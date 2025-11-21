@@ -50,83 +50,83 @@ const PerformanceMetrics = ({ priceInfo, securityInfo, tradeInfo }: PerformanceM
   };
 
   return (
-    <Card className="border-gray-200 shadow-sm">
+    <Card className="border-gray-200 dark:border-gray-800 shadow-sm bg-card dark:bg-[#1a1a1a]">
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
-          <CardTitle className="text-base font-semibold text-gray-900">Performance</CardTitle>
-          <InfoIcon className="w-4 h-4 text-gray-500" />
+          <CardTitle className="text-base font-semibold text-gray-900 dark:text-white">Performance</CardTitle>
+          <InfoIcon className="w-4 h-4 text-gray-500 dark:text-gray-400" />
         </div>
       </CardHeader>
       <CardContent className="space-y-5 pt-0">
         {/* Today's Low/High - Match Groww style */}
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
-            <span className="text-gray-600">Today&apos;s Low</span>
-            <span className="font-medium text-gray-900">{safeToFixed(todayLow)}</span>
+            <span className="text-gray-600 dark:text-gray-400">Today&apos;s Low</span>
+            <span className="font-medium text-gray-900 dark:text-white">{safeToFixed(todayLow)}</span>
           </div>
-          <div className="relative h-2 bg-gray-200 rounded-full">
+          <div className="relative h-2 bg-gray-200 dark:bg-gray-800 rounded-full">
             <div
-              className="absolute h-2 bg-gray-400 rounded-full"
+              className="absolute h-2 bg-gray-400 dark:bg-gray-600 rounded-full"
               style={{ width: `${todayPosition}%` }}
             />
             <div
-              className="absolute w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px] border-transparent border-t-gray-700"
+              className="absolute w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px] border-transparent border-t-gray-700 dark:border-t-gray-500"
               style={{ left: `calc(${todayPosition}% - 6px)`, top: "-6px" }}
             />
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-gray-600">Today&apos;s High</span>
-            <span className="font-medium text-gray-900">{safeToFixed(todayHigh)}</span>
+            <span className="text-gray-600 dark:text-gray-400">Today&apos;s High</span>
+            <span className="font-medium text-gray-900 dark:text-white">{safeToFixed(todayHigh)}</span>
           </div>
         </div>
 
         {/* 52 Week Low/High - Match Groww style */}
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
-            <span className="text-gray-600">52W Low</span>
-            <span className="font-medium text-gray-900">{safeToFixed(week52Low)}</span>
+            <span className="text-gray-600 dark:text-gray-400">52W Low</span>
+            <span className="font-medium text-gray-900 dark:text-white">{safeToFixed(week52Low)}</span>
           </div>
-          <div className="relative h-2 bg-gray-200 rounded-full">
+          <div className="relative h-2 bg-gray-200 dark:bg-gray-800 rounded-full">
             <div
-              className="absolute h-2 bg-gray-400 rounded-full"
+              className="absolute h-2 bg-gray-400 dark:bg-gray-600 rounded-full"
               style={{ width: `${week52Position}%` }}
             />
             <div
-              className="absolute w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px] border-transparent border-t-gray-700"
+              className="absolute w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px] border-transparent border-t-gray-700 dark:border-t-gray-500"
               style={{ left: `calc(${week52Position}% - 6px)`, top: "-6px" }}
             />
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-gray-600">52W High</span>
-            <span className="font-medium text-gray-900">{safeToFixed(week52High)}</span>
+            <span className="text-gray-600 dark:text-gray-400">52W High</span>
+            <span className="font-medium text-gray-900 dark:text-white">{safeToFixed(week52High)}</span>
           </div>
         </div>
 
         {/* Other Metrics - Match Groww style */}
-        <div className="grid grid-cols-2 gap-x-6 gap-y-3 pt-4 border-t border-gray-200">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-3 pt-4 border-t border-gray-200 dark:border-gray-800">
           <div>
-            <div className="text-sm text-gray-600 mb-1">Open</div>
-            <div className="text-sm font-medium text-gray-900">{safeToFixed(open)}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Open</div>
+            <div className="text-sm font-medium text-gray-900 dark:text-white">{safeToFixed(open)}</div>
           </div>
           <div>
-            <div className="text-sm text-gray-600 mb-1">Prev. Close</div>
-            <div className="text-sm font-medium text-gray-900">{safeToFixed(previousClose)}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Prev. Close</div>
+            <div className="text-sm font-medium text-gray-900 dark:text-white">{safeToFixed(previousClose)}</div>
           </div>
           <div>
-            <div className="text-sm text-gray-600 mb-1">Volume</div>
-            <div className="text-sm font-medium text-gray-900">{formatVolume(volume)}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Volume</div>
+            <div className="text-sm font-medium text-gray-900 dark:text-white">{formatVolume(volume)}</div>
           </div>
           <div>
-            <div className="text-sm text-gray-600 mb-1">Total traded value</div>
-            <div className="text-sm font-medium text-gray-900">{formatValue(totalTradedValue)}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total traded value</div>
+            <div className="text-sm font-medium text-gray-900 dark:text-white">{formatValue(totalTradedValue)}</div>
           </div>
           <div>
-            <div className="text-sm text-gray-600 mb-1">Upper Circuit</div>
-            <div className="text-sm font-medium text-gray-900">{safeToFixed(upperCircuit)}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Upper Circuit</div>
+            <div className="text-sm font-medium text-gray-900 dark:text-white">{safeToFixed(upperCircuit)}</div>
           </div>
           <div>
-            <div className="text-sm text-gray-600 mb-1">Lower Circuit</div>
-            <div className="text-sm font-medium text-gray-900">{safeToFixed(lowerCircuit)}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Lower Circuit</div>
+            <div className="text-sm font-medium text-gray-900 dark:text-white">{safeToFixed(lowerCircuit)}</div>
           </div>
         </div>
       </CardContent>

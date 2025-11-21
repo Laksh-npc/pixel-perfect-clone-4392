@@ -77,7 +77,7 @@ const HoldingsView = ({ onStockSelect }: HoldingsViewProps) => {
 
   if (loading) {
     return (
-      <Card className="border-gray-200 shadow-sm">
+      <Card className="border-gray-200 dark:border-gray-800 shadow-sm bg-card dark:bg-[#1a1a1a]">
         <CardHeader>
           <Skeleton className="h-6 w-32" />
         </CardHeader>
@@ -90,71 +90,71 @@ const HoldingsView = ({ onStockSelect }: HoldingsViewProps) => {
 
   if (holdings.length === 0) {
     return (
-      <Card className="border-gray-200 shadow-sm">
+      <Card className="border-gray-200 dark:border-gray-800 shadow-sm bg-card dark:bg-[#1a1a1a]">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold text-gray-900">Holdings (0)</CardTitle>
+          <CardTitle className="text-base font-semibold text-gray-900 dark:text-white">Holdings (0)</CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
-          <p className="text-sm text-gray-600 text-center py-8">No holdings yet</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400 text-center py-8">No holdings yet</p>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card className="border-gray-200 shadow-sm">
+    <Card className="border-gray-200 dark:border-gray-800 shadow-sm bg-card dark:bg-[#1a1a1a]">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div 
             className="flex items-center gap-2 cursor-pointer"
             onClick={() => setExpanded(!expanded)}
           >
-            <CardTitle className="text-base font-semibold text-gray-900">
+            <CardTitle className="text-base font-semibold text-gray-900 dark:text-white">
               Holdings ({holdings.length})
             </CardTitle>
             <ChevronDown 
-              className={`w-4 h-4 text-gray-500 transition-transform ${expanded ? "" : "-rotate-90"}`} 
+              className={`w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform ${expanded ? "" : "-rotate-90"}`} 
             />
           </div>
           <div className="flex items-center gap-2">
             <Button 
               variant="ghost" 
               size="sm" 
-              className="h-8 w-8 p-0 hover:bg-gray-100"
+              className="h-8 w-8 p-0 hover:bg-gray-100 dark:hover:bg-gray-800"
               onClick={(e) => {
                 e.stopPropagation();
                 toggleVisibility();
               }}
             >
-              {isVisible ? <Eye className="w-4 h-4 text-gray-600" /> : <EyeOff className="w-4 h-4 text-gray-600" />}
+              {isVisible ? <Eye className="w-4 h-4 text-gray-600 dark:text-gray-400" /> : <EyeOff className="w-4 h-4 text-gray-600 dark:text-gray-400" />}
             </Button>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-gray-100">
-              <MoreVertical className="w-4 h-4 text-gray-600" />
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-gray-100 dark:hover:bg-gray-800">
+              <MoreVertical className="w-4 h-4 text-gray-600 dark:text-gray-400" />
             </Button>
           </div>
         </div>
 
         {/* Portfolio Summary - Match Groww style exactly */}
-        <div className="mt-4 pt-4 border-t border-gray-200">
+        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
-              <div className="text-xs text-gray-600 mb-1">Current value</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Current value</div>
               <VisibilityValue 
                 value={formatCurrency(summary.currentValue)}
-                className="text-sm font-semibold text-gray-900"
+                className="text-sm font-semibold text-gray-900 dark:text-white"
               />
             </div>
             <div className="text-right">
-              <div className="text-xs text-gray-600 mb-1">Invested value</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Invested value</div>
               <VisibilityValue 
                 value={formatCurrency(summary.investedAmount)}
-                className="text-sm font-semibold text-gray-900"
+                className="text-sm font-semibold text-gray-900 dark:text-white"
               />
             </div>
           </div>
           <div className="flex justify-between items-center mb-3">
-            <span className="text-sm text-gray-600">1D returns</span>
-            <span className={`text-sm font-semibold ${summary.oneDayReturns >= 0 ? "text-green-600" : "text-red-600"}`}>
+            <span className="text-sm text-gray-600 dark:text-gray-400">1D returns</span>
+            <span className={`text-sm font-semibold ${summary.oneDayReturns >= 0 ? "text-green-600 dark:text-green-500" : "text-red-600 dark:text-red-500"}`}>
               {isVisible ? (
                 <>
                   {summary.oneDayReturns >= 0 ? "+" : ""}{formatCurrency(summary.oneDayReturns)} ({formatPercent(summary.oneDayReturnsPercent)})
@@ -165,8 +165,8 @@ const HoldingsView = ({ onStockSelect }: HoldingsViewProps) => {
             </span>
           </div>
           <div className="flex justify-between items-center mb-4">
-            <span className="text-sm text-gray-600">Total returns</span>
-            <span className={`text-sm font-semibold ${summary.totalReturns >= 0 ? "text-green-600" : "text-red-600"}`}>
+            <span className="text-sm text-gray-600 dark:text-gray-400">Total returns</span>
+            <span className={`text-sm font-semibold ${summary.totalReturns >= 0 ? "text-green-600 dark:text-green-500" : "text-red-600 dark:text-red-500"}`}>
               {isVisible ? (
                 <>
                   {summary.totalReturns >= 0 ? "+" : ""}{formatCurrency(summary.totalReturns)} ({formatPercent(summary.totalReturnsPercent)})
@@ -176,12 +176,12 @@ const HoldingsView = ({ onStockSelect }: HoldingsViewProps) => {
               )}
             </span>
           </div>
-          <div className="flex items-center gap-2 pt-2 border-t border-gray-200">
-            <Button variant="outline" size="sm" className="flex-1 h-9 text-sm font-normal border-gray-300 hover:bg-gray-50">
+          <div className="flex items-center gap-2 pt-2 border-t border-gray-200 dark:border-gray-800">
+            <Button variant="outline" size="sm" className="flex-1 h-9 text-sm font-normal border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300">
               Analyse
             </Button>
-            <Button variant="ghost" size="icon" className="h-9 w-9 hover:bg-gray-100">
-              <MoreVertical className="w-4 h-4 text-gray-600" />
+            <Button variant="ghost" size="icon" className="h-9 w-9 hover:bg-gray-100 dark:hover:bg-gray-800">
+              <MoreVertical className="w-4 h-4 text-gray-600 dark:text-gray-400" />
             </Button>
           </div>
         </div>
@@ -192,16 +192,16 @@ const HoldingsView = ({ onStockSelect }: HoldingsViewProps) => {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-3 text-xs font-medium text-gray-600">Company</th>
-                  <th className="text-left py-3 px-3 text-xs font-medium text-gray-600">
-                    Market price (1D%) <span className="text-gray-400">▼</span>
+                <tr className="border-b border-gray-200 dark:border-gray-800">
+                  <th className="text-left py-3 px-3 text-xs font-medium text-gray-600 dark:text-gray-400">Company</th>
+                  <th className="text-left py-3 px-3 text-xs font-medium text-gray-600 dark:text-gray-400">
+                    Market price (1D%) <span className="text-gray-400 dark:text-gray-500">▼</span>
                   </th>
-                  <th className="text-left py-3 px-3 text-xs font-medium text-gray-600">
-                    Returns (%) <span className="text-gray-400">▼</span>
+                  <th className="text-left py-3 px-3 text-xs font-medium text-gray-600 dark:text-gray-400">
+                    Returns (%) <span className="text-gray-400 dark:text-gray-500">▼</span>
                   </th>
-                  <th className="text-left py-3 px-3 text-xs font-medium text-gray-600">
-                    Current (Invested) <span className="text-gray-400">▼</span>
+                  <th className="text-left py-3 px-3 text-xs font-medium text-gray-600 dark:text-gray-400">
+                    Current (Invested) <span className="text-gray-400 dark:text-gray-500">▼</span>
                   </th>
                 </tr>
               </thead>
@@ -216,7 +216,7 @@ const HoldingsView = ({ onStockSelect }: HoldingsViewProps) => {
                   return (
                     <tr
                       key={index}
-                      className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
+                      className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors"
                       onClick={() => handleStockClick(holding.symbol)}
                     >
                       <td className="py-3 px-3">
@@ -225,10 +225,10 @@ const HoldingsView = ({ onStockSelect }: HoldingsViewProps) => {
                             {getCompanyLogo(holding.companyName)}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <div className="text-sm font-medium text-gray-900 mb-0.5">
+                            <div className="text-sm font-medium text-gray-900 dark:text-white mb-0.5">
                               {holding.companyName}
                             </div>
-                            <div className="text-xs text-gray-600 mb-2">
+                            <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">
                               {holding.shares} shares • Avg. {isVisible ? formatCurrency(holding.avgPrice) : "••••"}
                             </div>
                           </div>
@@ -260,10 +260,10 @@ const HoldingsView = ({ onStockSelect }: HoldingsViewProps) => {
                             </div>
                           )}
                           <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium text-gray-900 mb-0.5">
+                            <div className="text-sm font-medium text-gray-900 dark:text-white mb-0.5">
                               <VisibilityValue value={formatCurrency(holding.currentPrice || 0)} />
                             </div>
-                            <div className={`text-xs font-medium ${isPositive ? "text-green-600" : "text-red-600"}`}>
+                            <div className={`text-xs font-medium ${isPositive ? "text-green-600 dark:text-green-500" : "text-red-600 dark:text-red-500"}`}>
                               {isVisible ? (
                                 <>
                                   {oneDayChange >= 0 ? "+" : ""}{formatCurrency(Math.abs(oneDayChange))} ({oneDayChangePercent >= 0 ? "+" : ""}{oneDayChangePercent.toFixed(2)}%)
@@ -276,22 +276,22 @@ const HoldingsView = ({ onStockSelect }: HoldingsViewProps) => {
                         </div>
                       </td>
                       <td className="py-3 px-3">
-                        <div className={`text-sm font-medium mb-0.5 ${returnsPositive ? "text-green-600" : "text-red-600"}`}>
+                        <div className={`text-sm font-medium mb-0.5 ${returnsPositive ? "text-green-600 dark:text-green-500" : "text-red-600 dark:text-red-500"}`}>
                           {isVisible ? (
                             <>{returnsPositive ? "+" : ""}{formatCurrency(holding.returns || 0)}</>
                           ) : (
                             <span className="tracking-widest">••••</span>
                           )}
                         </div>
-                        <div className={`text-xs font-medium ${returnsPositive ? "text-green-600" : "text-red-600"}`}>
+                        <div className={`text-xs font-medium ${returnsPositive ? "text-green-600 dark:text-green-500" : "text-red-600 dark:text-red-500"}`}>
                           {isVisible ? formatPercent(holding.returnsPercent || 0) : <span className="tracking-widest">••••</span>}
                         </div>
                       </td>
                       <td className="py-3 px-3">
-                        <div className="text-sm font-medium text-gray-900 mb-0.5">
+                        <div className="text-sm font-medium text-gray-900 dark:text-white mb-0.5">
                           <VisibilityValue value={formatCurrency(holding.currentValue || 0)} />
                         </div>
-                        <div className="text-xs text-gray-600">
+                        <div className="text-xs text-gray-600 dark:text-gray-400">
                           <VisibilityValue value={formatCurrency(holding.investedAmount)} />
                         </div>
                       </td>
