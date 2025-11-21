@@ -18,7 +18,11 @@ async function graphqlRequest<T>(query: string, variables?: Record<string, any>)
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Accept": "application/json",
       },
+      // Add mode to handle CORS properly
+      mode: 'cors',
+      credentials: 'omit',
       body: JSON.stringify({
         query,
         variables,
@@ -39,7 +43,10 @@ async function graphqlRequest<T>(query: string, variables?: Record<string, any>)
     
     if (result.errors) {
       // Log but don't throw for GraphQL errors
-      console.warn("GraphQL errors:", result.errors);
+      // Only log if there are actual errors (not just empty result)
+      if (result.errors.length > 0 && result.errors[0].message) {
+        console.warn("GraphQL errors:", result.errors);
+      }
       return {} as T;
     }
 
@@ -227,7 +234,15 @@ export const api = {
   async fetchFromRest<T>(endpoint: string, options?: { silent?: boolean }): Promise<T> {
     const url = `${DEFAULT_BASE_URL}${endpoint}`;
     try {
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        // Add headers to help with CORS
+        headers: {
+          'Accept': 'application/json',
+        },
+        // Add mode to handle CORS properly
+        mode: 'cors',
+        credentials: 'omit',
+      });
       if (!response.ok) {
         const text = await response.text().catch(() => "");
         // For 404 and 400 errors, throw but allow caller to handle
@@ -237,6 +252,14 @@ export const api = {
             console.warn(`API server error (${response.status}) for ${endpoint}: Backend may be unavailable`);
           }
           throw new Error(`API ${response.status}: Server error`);
+        }
+        // For 400 errors, try to get more details but don't spam console
+        if (response.status === 400) {
+          // 400 errors might be due to invalid symbols or malformed requests
+          // Log only if not silent
+          if (!options?.silent) {
+            console.debug(`API 400 error for ${endpoint}: ${text.substring(0, 100)}`);
+          }
         }
         // Try to parse JSON error if possible
         let errorMessage = text || response.statusText;
@@ -350,11 +373,17 @@ export const api = {
   },
 
   // Fetch news from NewsAPI (fallback source)
+  // Note: NewsAPI has CORS restrictions and may not work from browser directly
+  // This is a fallback that may fail silently
   getNewsAPINews: async () => {
     try {
       const NEWSAPI_API_KEY = "07e428f73d03408aa5f5096d5351452d";
       const url = `https://newsapi.org/v2/everything?q=stocks OR nifty OR sensex&language=en&sortBy=publishedAt&apiKey=${NEWSAPI_API_KEY}`;
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        // Add mode to handle CORS
+        mode: 'cors',
+        credentials: 'omit',
+      });
       
       if (!response.ok) {
         throw new Error(`NewsAPI error: ${response.status}`);
@@ -363,6 +392,15 @@ export const api = {
       const data = await response.json();
       return Array.isArray(data.articles) ? data.articles : [];
     } catch (error: any) {
+      // NewsAPI has CORS/SSL restrictions when called from browser
+      // This is expected and we'll silently fail to avoid console spam
+      if (error?.message?.includes("Failed to fetch") || 
+          error?.message?.includes("ERR_CERT_AUTHORITY_INVALID") ||
+          error?.name === "TypeError") {
+        // Silently fail - this is expected due to CORS restrictions
+        return [];
+      }
+      // Only log unexpected errors
       console.warn("Failed to fetch from NewsAPI:", error.message);
       return [];
     }

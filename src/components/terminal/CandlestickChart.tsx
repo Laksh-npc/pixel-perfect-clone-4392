@@ -87,7 +87,7 @@ const CandlestickShape = (props: any) => {
   const bodyBottomY = y; // This will be adjusted by the actual scale
   
   // For now, render a simplified version
-  // The actual positions will be calculated by Recharts when we use proper dataKeys
+  // The actual positions will be calculated by Recharts when we use proper dataKesys
   return (
     <g>
       {/* High-Low wick - will be rendered separately */}
