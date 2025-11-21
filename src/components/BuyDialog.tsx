@@ -13,6 +13,7 @@ import { useHoldings } from "@/hooks/useHoldings";
 import { useBalance } from "@/hooks/useBalance";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface BuyDialogProps {
   open: boolean;
@@ -25,7 +26,7 @@ interface BuyDialogProps {
 
 const BuyDialog = ({ open, onOpenChange, symbol, companyName, currentPrice, priceInfo }: BuyDialogProps) => {
   const { addHolding } = useHoldings();
-  const { balance } = useBalance();
+  const { balance, deductBalance } = useBalance();
   const [quantity, setQuantity] = useState("");
   const [orderType, setOrderType] = useState<"Delivery" | "Intraday" | "MTF">("Delivery");
   const mtfMultiplier = 2.33;
@@ -49,16 +50,23 @@ const BuyDialog = ({ open, onOpenChange, symbol, companyName, currentPrice, pric
     const avgPrice = effectivePrice;
     const investedAmount = shares * avgPrice;
 
-    addHolding({
-      symbol,
-      companyName,
-      shares,
-      avgPrice,
-      investedAmount,
-    });
+    // Deduct balance if sufficient
+    if (deductBalance(investedAmount)) {
+      addHolding({
+        symbol,
+        companyName,
+        shares,
+        avgPrice,
+        investedAmount,
+      });
 
-    onOpenChange(false);
-    setQuantity("");
+      toast.success(`Successfully bought ${shares} shares of ${companyName}`);
+      onOpenChange(false);
+      setQuantity("");
+    } else {
+      // Show error - insufficient balance
+      toast.error(`Insufficient balance. Required: ₹${investedAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+    }
   };
 
   const formatCurrency = (value: number) => {

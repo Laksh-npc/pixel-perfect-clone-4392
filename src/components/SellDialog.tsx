@@ -13,6 +13,7 @@ import { useHoldings } from "@/hooks/useHoldings";
 import { useBalance } from "@/hooks/useBalance";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface SellDialogProps {
   open: boolean;
@@ -25,7 +26,7 @@ interface SellDialogProps {
 
 const SellDialog = ({ open, onOpenChange, symbol, companyName, currentPrice, priceInfo }: SellDialogProps) => {
   const { holdings, removeHolding } = useHoldings();
-  const { balance } = useBalance();
+  const { balance, addBalance } = useBalance();
   const [quantity, setQuantity] = useState("");
   const [orderType, setOrderType] = useState<"Delivery" | "Intraday" | "MTF">("Delivery");
   const [priceType, setPriceType] = useState<"Market" | "Limit">("Limit");
@@ -50,7 +51,14 @@ const SellDialog = ({ open, onOpenChange, symbol, companyName, currentPrice, pri
   const handleSell = () => {
     if (!quantity || parseFloat(quantity) <= 0 || parseFloat(quantity) > maxShares) return;
 
-    removeHolding(symbol, parseFloat(quantity));
+    const sharesToSell = parseFloat(quantity);
+    const saleAmount = sharesToSell * effectivePrice;
+
+    // Add balance back
+    addBalance(saleAmount);
+
+    removeHolding(symbol, sharesToSell);
+    toast.success(`Successfully sold ${sharesToSell} shares of ${companyName}`);
     onOpenChange(false);
     setQuantity("");
   };

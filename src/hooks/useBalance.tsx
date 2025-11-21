@@ -37,9 +37,27 @@ export const useBalance = () => {
     return false;
   };
 
+  const deductBalance = (amount: number) => {
+    if (amount > 0 && balance >= amount) {
+      setBalance((prev) => prev - amount);
+      return true;
+    }
+    return false;
+  };
+
+  const setBalanceValue = (amount: number) => {
+    if (amount >= 0) {
+      setBalance(amount);
+      return true;
+    }
+    return false;
+  };
+
   return {
     balance,
     addBalance,
+    deductBalance,
+    setBalance: setBalanceValue,
   };
 };
 

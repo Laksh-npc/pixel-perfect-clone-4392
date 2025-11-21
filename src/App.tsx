@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ErrorBoundary } from "react-error-boundary";
 import { VisibilityProvider } from "@/hooks/useVisibility";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import Index from "./pages/Index";
 import StockDetail from "./pages/StockDetail";
 import MostBoughtStocks from "./pages/MostBoughtStocks";
@@ -12,6 +13,7 @@ import Terminal from "./pages/Terminal";
 import DSFMAnalysis from "./pages/DSFMAnalysis";
 import Holdings from "./pages/Holdings";
 import SectorDetail from "./pages/SectorDetail";
+import Balance from "./pages/Balance";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -56,27 +58,30 @@ const App = () => (
       console.error("Error caught by boundary:", error, info);
     }}
   >
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <VisibilityProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/stock/:symbol" element={<StockDetail />} />
-              <Route path="/terminal/:symbol" element={<Terminal />} />
-              <Route path="/most-bought-stocks" element={<MostBoughtStocks />} />
-              <Route path="/dsfm-analysis" element={<DSFMAnalysis />} />
-              <Route path="/holdings" element={<Holdings />} />
-              <Route path="/sector/:sectorName" element={<SectorDetail />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </VisibilityProvider>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <VisibilityProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/stock/:symbol" element={<StockDetail />} />
+                <Route path="/terminal/:symbol" element={<Terminal />} />
+                <Route path="/most-bought-stocks" element={<MostBoughtStocks />} />
+                <Route path="/dsfm-analysis" element={<DSFMAnalysis />} />
+                <Route path="/holdings" element={<Holdings />} />
+                <Route path="/sector/:sectorName" element={<SectorDetail />} />
+                <Route path="/balance" element={<Balance />} />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </VisibilityProvider>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   </ErrorBoundary>
 );
 

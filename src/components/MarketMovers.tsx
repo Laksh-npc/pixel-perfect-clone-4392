@@ -144,9 +144,9 @@ const MarketMovers = () => {
   }
 
   return (
-    <div className="border border-gray-200 rounded-lg bg-white shadow-sm">
+    <div className="border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-[#1a1a1a] shadow-sm">
       <div className="px-5 pt-5 pb-4">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Top market movers</h2>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Top market movers</h2>
         
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
@@ -155,8 +155,8 @@ const MarketMovers = () => {
               className={cn(
                 "px-4 py-1.5 text-sm font-medium rounded-full border transition-all",
                 tab === "GAINERS"
-                  ? "bg-white border-gray-300 shadow-sm text-gray-900"
-                  : "bg-transparent border-gray-200 text-gray-600 hover:border-gray-300"
+                  ? "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 shadow-sm text-gray-900 dark:text-white"
+                  : "bg-transparent border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"
               )}
             >
               Gainers
@@ -166,8 +166,8 @@ const MarketMovers = () => {
               className={cn(
                 "px-4 py-1.5 text-sm font-medium rounded-full border transition-all",
                 tab === "LOSERS"
-                  ? "bg-white border-gray-300 shadow-sm text-gray-900"
-                  : "bg-transparent border-gray-200 text-gray-600 hover:border-gray-300"
+                  ? "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 shadow-sm text-gray-900 dark:text-white"
+                  : "bg-transparent border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"
               )}
             >
               Losers
@@ -177,8 +177,8 @@ const MarketMovers = () => {
               className={cn(
                 "px-4 py-1.5 text-sm font-medium rounded-full border transition-all",
                 tab === "VOLUME"
-                  ? "bg-white border-gray-300 shadow-sm text-gray-900"
-                  : "bg-transparent border-gray-200 text-gray-600 hover:border-gray-300"
+                  ? "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 shadow-sm text-gray-900 dark:text-white"
+                  : "bg-transparent border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"
               )}
             >
               Volume shockers
@@ -186,7 +186,7 @@ const MarketMovers = () => {
           </div>
           <div className="w-[140px]">
             <Select value={universe} onValueChange={setUniverse}>
-              <SelectTrigger className="h-8 text-sm rounded-md border-gray-200 bg-white">
+              <SelectTrigger className="h-8 text-sm rounded-md border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
                 <SelectValue placeholder="NIFTY 50" />
               </SelectTrigger>
               <SelectContent>
@@ -207,10 +207,10 @@ const MarketMovers = () => {
       <div className="px-5 pb-5">
         <table className="w-full">
           <thead>
-            <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="py-3 px-0 text-left text-xs font-medium text-gray-600">Company</th>
-              <th className="py-3 px-0 text-left text-xs font-medium text-gray-600">Market price (1D)</th>
-              <th className="py-3 px-0 text-right text-xs font-medium text-gray-600">Volume</th>
+            <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
+              <th className="py-3 px-0 text-left text-xs font-medium text-gray-600 dark:text-gray-400">Company</th>
+              <th className="py-3 px-0 text-left text-xs font-medium text-gray-600 dark:text-gray-400">Market price (1D)</th>
+              <th className="py-3 px-0 text-right text-xs font-medium text-gray-600 dark:text-gray-400">Volume</th>
             </tr>
           </thead>
           <tbody>
@@ -242,7 +242,7 @@ const MarketMovers = () => {
             )}
             {!loading && !error && stocks.length === 0 && (
               <tr>
-                <td className="py-8 text-center text-gray-500 text-sm" colSpan={3}>
+                <td className="py-8 text-center text-gray-500 dark:text-gray-400 text-sm" colSpan={3}>
                   No data available
                 </td>
               </tr>
@@ -252,7 +252,7 @@ const MarketMovers = () => {
               return (
                 <tr 
                   key={stock.symbol || index} 
-                  className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50 cursor-pointer transition-colors"
+                  className="border-b border-gray-100 dark:border-gray-800 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors"
                   onClick={() => stock.symbol && navigate(`/stock/${stock.symbol}`)}
                 >
                   <td className="py-3 px-0">
@@ -260,7 +260,7 @@ const MarketMovers = () => {
                       <div className={cn("w-8 h-8 rounded flex items-center justify-center text-xs font-semibold text-white shadow-sm flex-shrink-0", stock.iconClasses || 'bg-gradient-to-br from-blue-600 to-blue-700')}>
                         {stock.logo}
                       </div>
-                      <span className="font-medium text-sm text-gray-900">{stock.name}</span>
+                      <span className="font-medium text-sm text-gray-900 dark:text-white">{stock.name}</span>
                     </div>
                   </td>
                   <td className="py-3 px-0">
@@ -269,7 +269,7 @@ const MarketMovers = () => {
                       <div className="w-16 h-6 flex-shrink-0 relative">
                         <svg className="w-full h-full" viewBox="0 0 100 30" preserveAspectRatio="none">
                           {/* Grey baseline */}
-                          <line x1="0" y1="25" x2="100" y2="25" stroke="#e5e7eb" strokeWidth="0.5" />
+                          <line x1="0" y1="25" x2="100" y2="25" stroke="currentColor" className="text-gray-300 dark:text-gray-700" strokeWidth="0.5" />
                           {/* Main line */}
                           <polyline
                             points={lineData.map(d => `${d.x},${30 - d.y}`).join(" ")}
@@ -282,15 +282,15 @@ const MarketMovers = () => {
                         </svg>
                       </div>
                       <div className="flex flex-col">
-                        <div className="font-semibold text-sm leading-tight text-gray-900">{stock.priceFormatted}</div>
-                        <div className={`text-xs font-medium leading-tight mt-0.5 ${stock.positive ? 'text-green-600' : 'text-red-600'}`}>
+                        <div className="font-semibold text-sm leading-tight text-gray-900 dark:text-white">{stock.priceFormatted}</div>
+                        <div className={`text-xs font-medium leading-tight mt-0.5 ${stock.positive ? 'text-green-600 dark:text-green-500' : 'text-red-600 dark:text-red-500'}`}>
                           {stock.change >= 0 ? "+" : ""}{stock.changeFormatted} {stock.percentFormatted}
                         </div>
                       </div>
                     </div>
                   </td>
                   <td className="py-3 px-0 text-right">
-                    <span className="text-sm text-gray-600">{stock.volumeFormatted}</span>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">{stock.volumeFormatted}</span>
                   </td>
                 </tr>
               );
@@ -304,9 +304,9 @@ const MarketMovers = () => {
         </table>
         
         {!loading && stocks.length > 0 && (
-          <div className="mt-4 pt-3 border-t border-gray-200">
+          <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-800">
             <button 
-              className="text-sm text-blue-600 font-medium hover:underline"
+              className="text-sm text-blue-600 dark:text-blue-500 font-medium hover:underline"
               onClick={() => {
                 // Navigate to a more detailed view if needed
                 console.log("See more clicked");

@@ -279,7 +279,7 @@ const NewsSection = () => {
           return (
             <div
               key={item.id || index}
-              className="border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer bg-white border-gray-200"
+              className="border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer bg-white dark:bg-[#1a1a1a] border-gray-200 dark:border-gray-800"
               onClick={() => handleNewsClick(item)}
             >
               <div className="flex items-start gap-3 mb-3">
@@ -301,22 +301,22 @@ const NewsSection = () => {
                 <div className="flex-1 min-w-0 flex items-center justify-between">
                   <div className="font-medium text-sm">{item.companyName || item.source}</div>
                   {item.changePercent !== undefined && (
-                    <div className={`text-sm font-semibold ml-2 ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                    <div className={`text-sm font-semibold ml-2 ${isPositive ? 'text-green-600 dark:text-green-500' : 'text-red-600 dark:text-red-500'}`}>
                       {isPositive ? '+' : ''}{changePercent.toFixed(2)}%
                     </div>
                   )}
                 </div>
               </div>
               
-              <h3 className="text-sm font-semibold text-gray-900 mb-2 line-clamp-2">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2">
                 {item.title}
               </h3>
               
-              <p className="text-sm text-gray-600 mb-3 line-clamp-3 leading-relaxed">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-3 leading-relaxed">
                 {item.description || item.title}
               </p>
               
-              <div className="text-xs text-gray-500">
+              <div className="text-xs text-gray-500 dark:text-gray-500">
                 {item.source ? item.source.split('.').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ') : 'News'} · {formatTime(item.publishedAt)}
               </div>
             </div>
