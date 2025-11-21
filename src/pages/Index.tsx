@@ -31,6 +31,10 @@ const Index = () => {
   const navigate = useNavigate();
   const [mostBoughtStocks, setMostBoughtStocks] = useState<StockCardData[]>([]);
   const [loadingMostBought, setLoadingMostBought] = useState(true);
+  const [mtfStocks, setMtfStocks] = useState<StockCardData[]>([]);
+  const [loadingMtf, setLoadingMtf] = useState(true);
+  const [intradayScreenerStocks, setIntradayScreenerStocks] = useState<StockCardData[]>([]);
+  const [loadingIntraday, setLoadingIntraday] = useState(true);
 
   // Helper function to generate logo from company name
   const getLogo = (name: string): string => {
@@ -48,6 +52,8 @@ const Index = () => {
       try {
         setLoadingMostBought(true);
         // Fetch stock details for all symbols in parallel
+        // IMPORTANT: Use the same API endpoint as StockDetail page (api.getStockDetails)
+        // This ensures we get the exact same data structure and price values
         const stockPromises = MOST_BOUGHT_SYMBOLS.map(symbol => 
           api.getStockDetails(symbol).catch((error: any) => {
             // Only log if it's not a network/backend error (expected when backend is down)
@@ -82,11 +88,16 @@ const Index = () => {
             }
 
             const priceInfo = stock.priceInfo || {};
-            // Use lastPrice (same as StockDetail page) - this is the current/latest price
-            const lastPrice = priceInfo.lastPrice || priceInfo.close || 0;
-            // Use the API's calculated change and pChange (same as StockDetail page)
-            const change = priceInfo.change || 0;
-            const pChange = priceInfo.pChange || 0;
+            
+            // CRITICAL: Use EXACT same price extraction logic as StockDetail page
+            // StockDetail.tsx line 101: const currentPrice = Number(priceInfo.lastPrice) || 0;
+            // We must match this exactly to ensure prices are identical
+            const lastPrice = Number(priceInfo.lastPrice) || 0;
+            
+            // CRITICAL: Use EXACT same change extraction as StockDetail page
+            // StockDetail.tsx line 103-104: const change = Number(priceInfo.change) || 0; const percentChange = Number(priceInfo.pChange) || 0;
+            const change = Number(priceInfo.change) || 0;
+            const pChange = Number(priceInfo.pChange) || 0;
             const positive = change >= 0;
             const symbol = stock.info?.symbol || MOST_BOUGHT_SYMBOLS[index];
             const companyName = stock.info?.companyName || symbol;
@@ -96,13 +107,15 @@ const Index = () => {
               return null;
             }
           
-            // Format price with Indian currency (same format as StockDetail page)
+            // CRITICAL: Use EXACT same formatting as StockDetail page
+            // StockDetail formats price as: currentPrice.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+            // We must match this exactly, including the currency symbol placement
             const formattedPrice = `₹${lastPrice.toLocaleString("en-IN", { 
               minimumFractionDigits: 2, 
               maximumFractionDigits: 2 
             })}`;
             
-            // Format change (same format as StockDetail page)
+            // Format change (exact same format as StockDetail page)
             const formattedChange = `${change >= 0 ? "+" : ""}${change.toFixed(2)}`;
             const formattedPercent = `(${pChange >= 0 ? "+" : ""}${pChange.toFixed(2)}%)`;
             
@@ -150,24 +163,213 @@ const Index = () => {
 
     fetchMostBoughtStocks();
     
+    // Refresh data when component becomes visible (user navigates back to page)
+    // This ensures prices are always fresh and match StockDetail page
+    const handleVisibilityChange = () => {
+      if (!document.hidden && isMounted) {
+        fetchMostBoughtStocks();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      isMounted = false;
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
+  // Fetch MTF stocks from API (same logic as most bought stocks)
+  useEffect(() => {
+    let isMounted = true;
+    const MTF_SYMBOLS = ["ITC", "HDFCBANK", "ICICIBANK", "SBIN"];
+    
+    const fetchMtfStocks = async () => {
+      try {
+        setLoadingMtf(true);
+        const stockPromises = MTF_SYMBOLS.map(symbol => 
+          api.getStockDetails(symbol).catch((error: any) => {
+            if (error?.message && !error.message.includes('getaddrinfo') && !error.message.includes('ENOTFOUND')) {
+              console.warn(`Failed to fetch MTF details for ${symbol}:`, error.message);
+            }
+            return null;
+          })
+        );
+        const stockDetails = await Promise.all(stockPromises);
+        
+        const validStockDetails = stockDetails.map((stock, index) => {
+          if (stock && stock.error) {
+            const errorMsg = stock.message || stock.error || '';
+            if (!errorMsg.includes('getaddrinfo') && !errorMsg.includes('ENOTFOUND')) {
+              console.warn(`API error for MTF ${MTF_SYMBOLS[index]}:`, errorMsg);
+            }
+            return null;
+          }
+          return stock;
+        });
+        
+        if (!isMounted) return;
+
+        const stocksData: (StockCardData | null)[] = validStockDetails
+          .map((stock, index) => {
+            if (!stock || stock.error || !stock.info) {
+              return null;
+            }
+
+            const priceInfo = stock.priceInfo || {};
+            // Use EXACT same price extraction as StockDetail page
+            const lastPrice = Number(priceInfo.lastPrice) || 0;
+            const change = Number(priceInfo.change) || 0;
+            const pChange = Number(priceInfo.pChange) || 0;
+            const positive = change >= 0;
+            const symbol = stock.info?.symbol || MTF_SYMBOLS[index];
+            const companyName = stock.info?.companyName || symbol;
+
+            if (!companyName || companyName === "Unknown" || lastPrice === 0) {
+              return null;
+            }
+          
+            const formattedPrice = `₹${lastPrice.toLocaleString("en-IN", { 
+              minimumFractionDigits: 2, 
+              maximumFractionDigits: 2 
+            })}`;
+            
+            const formattedChange = `${change >= 0 ? "+" : ""}${change.toFixed(2)}`;
+            const formattedPercent = `(${pChange >= 0 ? "+" : ""}${pChange.toFixed(2)}%)`;
+            
+            let displayName = companyName;
+            if (companyName.length > 25) {
+              displayName = companyName.substring(0, 22) + "...";
+            }
+
+            return {
+              logo: getLogo(companyName),
+              name: displayName,
+              symbol: symbol,
+              price: formattedPrice,
+              change: formattedChange,
+              percent: formattedPercent,
+              positive,
+            };
+          });
+
+        const stocks: StockCardData[] = stocksData.filter((stock): stock is StockCardData => stock !== null);
+        if (isMounted) {
+          setMtfStocks(stocks);
+        }
+      } catch (error: any) {
+        const errorMsg = error?.message || String(error || '');
+        if (!errorMsg.includes('getaddrinfo') && !errorMsg.includes('ENOTFOUND') && !errorMsg.includes('Network error') && !errorMsg.includes('API 400') && !errorMsg.includes('API 500')) {
+          console.error("Error fetching MTF stocks:", error);
+        }
+      } finally {
+        if (isMounted) {
+          setLoadingMtf(false);
+        }
+      }
+    };
+
+    fetchMtfStocks();
     return () => {
       isMounted = false;
     };
   }, []);
 
-  const mtfStocks = [
-    { logo: "ITC", name: "ITC Limited", symbol: "ITC", price: "₹4,206.80", change: "309.80", percent: "(7.95%)", positive: true },
-    { logo: "HDFC", name: "HDFC Bank Limited", symbol: "HDFCBANK", price: "₹200.35", change: "4.46", percent: "(2.28%)", positive: true },
-    { logo: "ICICI", name: "ICICI Bank Limited", symbol: "ICICIBANK", price: "₹3,135.20", change: "469.80", percent: "(17.63%)", positive: true },
-    { logo: "SBIN", name: "State Bank of India", symbol: "SBIN", price: "₹251.97", change: "-20.06", percent: "(7.37%)", positive: false },
-  ];
+  // Fetch Intraday Screener stocks from API (same logic as most bought stocks)
+  useEffect(() => {
+    let isMounted = true;
+    const INTRADAY_SYMBOLS = ["WIPRO", "LT", "AXISBANK", "BHARTIARTL"];
+    
+    const fetchIntradayStocks = async () => {
+      try {
+        setLoadingIntraday(true);
+        const stockPromises = INTRADAY_SYMBOLS.map(symbol => 
+          api.getStockDetails(symbol).catch((error: any) => {
+            if (error?.message && !error.message.includes('getaddrinfo') && !error.message.includes('ENOTFOUND')) {
+              console.warn(`Failed to fetch Intraday details for ${symbol}:`, error.message);
+            }
+            return null;
+          })
+        );
+        const stockDetails = await Promise.all(stockPromises);
+        
+        const validStockDetails = stockDetails.map((stock, index) => {
+          if (stock && stock.error) {
+            const errorMsg = stock.message || stock.error || '';
+            if (!errorMsg.includes('getaddrinfo') && !errorMsg.includes('ENOTFOUND')) {
+              console.warn(`API error for Intraday ${INTRADAY_SYMBOLS[index]}:`, errorMsg);
+            }
+            return null;
+          }
+          return stock;
+        });
+        
+        if (!isMounted) return;
 
-  const intradayScreenerStocks = [
-    { logo: "WIPRO", name: "Wipro Limited", symbol: "WIPRO", price: "₹4,206.80", change: "309.80", percent: "(7.95%)", positive: true },
-    { logo: "LT", name: "Larsen & Toubro", symbol: "LT", price: "₹200.35", change: "4.46", percent: "(2.28%)", positive: true },
-    { logo: "AXIS", name: "Axis Bank Limited", symbol: "AXISBANK", price: "₹3,135.20", change: "469.80", percent: "(17.63%)", positive: true },
-    { logo: "BHARTI", name: "Bharti Airtel Limited", symbol: "BHARTIARTL", price: "₹251.97", change: "-20.06", percent: "(7.37%)", positive: false },
-  ];
+        const stocksData: (StockCardData | null)[] = validStockDetails
+          .map((stock, index) => {
+            if (!stock || stock.error || !stock.info) {
+              return null;
+            }
+
+            const priceInfo = stock.priceInfo || {};
+            // Use EXACT same price extraction as StockDetail page
+            const lastPrice = Number(priceInfo.lastPrice) || 0;
+            const change = Number(priceInfo.change) || 0;
+            const pChange = Number(priceInfo.pChange) || 0;
+            const positive = change >= 0;
+            const symbol = stock.info?.symbol || INTRADAY_SYMBOLS[index];
+            const companyName = stock.info?.companyName || symbol;
+
+            if (!companyName || companyName === "Unknown" || lastPrice === 0) {
+              return null;
+            }
+          
+            const formattedPrice = `₹${lastPrice.toLocaleString("en-IN", { 
+              minimumFractionDigits: 2, 
+              maximumFractionDigits: 2 
+            })}`;
+            
+            const formattedChange = `${change >= 0 ? "+" : ""}${change.toFixed(2)}`;
+            const formattedPercent = `(${pChange >= 0 ? "+" : ""}${pChange.toFixed(2)}%)`;
+            
+            let displayName = companyName;
+            if (companyName.length > 25) {
+              displayName = companyName.substring(0, 22) + "...";
+            }
+
+            return {
+              logo: getLogo(companyName),
+              name: displayName,
+              symbol: symbol,
+              price: formattedPrice,
+              change: formattedChange,
+              percent: formattedPercent,
+              positive,
+            };
+          });
+
+        const stocks: StockCardData[] = stocksData.filter((stock): stock is StockCardData => stock !== null);
+        if (isMounted) {
+          setIntradayScreenerStocks(stocks);
+        }
+      } catch (error: any) {
+        const errorMsg = error?.message || String(error || '');
+        if (!errorMsg.includes('getaddrinfo') && !errorMsg.includes('ENOTFOUND') && !errorMsg.includes('Network error') && !errorMsg.includes('API 400') && !errorMsg.includes('API 500')) {
+          console.error("Error fetching Intraday stocks:", error);
+        }
+      } finally {
+        if (isMounted) {
+          setLoadingIntraday(false);
+        }
+      }
+    };
+
+    fetchIntradayStocks();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const etfs = [
     { logo: "G", name: "Groww Nifty Midcap 15...", status: "NFO", statusColor: "text-muted-foreground", badge: "Open now", badgeColor: "text-success" },
@@ -216,22 +418,41 @@ const Index = () => {
 
             <section>
               <h2 className="text-xl font-semibold mb-4">Most traded stocks in MTF</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {mtfStocks.map((stock, index) => (
-                  <StockCard key={index} {...stock} />
-                ))}
-              </div>
+              {loadingMtf ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {[1, 2, 3, 4].map((i) => (
+                    <Skeleton key={i} className="h-32 w-full" />
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {mtfStocks.map((stock, index) => (
+                    <StockCard key={stock.symbol || index} {...stock} />
+                  ))}
+                </div>
+              )}
             </section>
 
             <section>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                {intradayScreenerStocks.map((stock, index) => (
-                  <StockCard key={index} {...stock} />
-                ))}
-              </div>
-              <button className="text-sm text-primary font-medium hover:underline">
-                Intraday screener →
-              </button>
+              <h2 className="text-xl font-semibold mb-4">Intraday screener</h2>
+              {loadingIntraday ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                  {[1, 2, 3, 4].map((i) => (
+                    <Skeleton key={i} className="h-32 w-full" />
+                  ))}
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                    {intradayScreenerStocks.map((stock, index) => (
+                      <StockCard key={stock.symbol || index} {...stock} />
+                    ))}
+                  </div>
+                  <button className="text-sm text-primary font-medium hover:underline">
+                    Intraday screener →
+                  </button>
+                </>
+              )}
             </section>
 
             <SectorsTrending />

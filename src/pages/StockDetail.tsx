@@ -98,10 +98,12 @@ const StockDetail = () => {
   const metadata = stockDetails.metadata || {};
   const securityInfo = stockDetails.securityInfo || {};
 
-  const currentPrice = priceInfo.lastPrice || 0;
-  const previousClose = priceInfo.previousClose || 0;
-  const change = priceInfo.change || 0;
-  const percentChange = priceInfo.pChange || 0;
+  // Convert to numbers explicitly to ensure consistency with Explore page
+  // This ensures both pages use the exact same data type and extraction logic
+  const currentPrice = Number(priceInfo.lastPrice) || 0;
+  const previousClose = Number(priceInfo.previousClose) || 0;
+  const change = Number(priceInfo.change) || 0;
+  const percentChange = Number(priceInfo.pChange) || 0;
   const isPositive = change >= 0;
 
   // Format company name for logo

@@ -55,7 +55,14 @@ const MarketMovers = () => {
         
         // Fetch gainers data
         const gainerPromises = gainerSymbols.map(symbol => 
-          api.getStockDetails(symbol).catch(() => null)
+          api.getStockDetails(symbol).catch((error: any) => {
+            // Silently handle errors - don't log expected network/backend errors
+            if (error?.message && !error.message.includes('getaddrinfo') && !error.message.includes('ENOTFOUND') && !error.message.includes('Network error') && !error.message.includes('API 400') && !error.message.includes('API 500')) {
+              // Only log unexpected errors
+              console.warn(`Failed to fetch gainer ${symbol}:`, error.message);
+            }
+            return null;
+          })
         );
         const gainerDetails = await Promise.all(gainerPromises);
         
