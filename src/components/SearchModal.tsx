@@ -146,6 +146,21 @@ const SearchModal = ({ open, onOpenChange }: SearchModalProps) => {
     }
   }, [open]);
 
+  // Handle Esc key to close modal
+  useEffect(() => {
+    if (!open) return;
+    
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onOpenChange(false);
+        setSearchQuery("");
+      }
+    };
+
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [open, onOpenChange]);
+
   if (!open) return null;
 
   const filters = [
@@ -167,20 +182,30 @@ const SearchModal = ({ open, onOpenChange }: SearchModalProps) => {
         return false;
       });
 
+  const handleBackdropClick = () => {
+    onOpenChange(false);
+    setSearchQuery("");
+  };
+
   return (
-    <div 
-      className="fixed inset-0 z-50 flex items-start justify-center pt-20"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          onOpenChange(false);
-        }
-      }}
-    >
-      {/* Backdrop with blur */}
-      <div className="fixed inset-0 bg-black/20 backdrop-blur-sm" />
+    <>
+      {/* Backdrop with very light blur and subtle tint - clickable */}
+      <div 
+        className="fixed inset-0 z-40 bg-black/5 backdrop-blur-[1px]"
+        onClick={handleBackdropClick}
+      />
       
       {/* Modal */}
-      <div className="relative z-50 w-full max-w-2xl bg-white rounded-lg shadow-2xl">
+      <div 
+        className="fixed inset-0 z-50 flex items-start justify-center pt-20 pointer-events-none"
+      >
+        <div 
+          className="relative w-full max-w-2xl bg-white rounded-lg shadow-2xl pointer-events-auto"
+          onClick={(e) => {
+            // Prevent closing when clicking inside modal
+            e.stopPropagation();
+          }}
+        >
         {/* Search Input */}
         <div className="flex items-center border-b px-4 py-3">
           <Search className="w-5 h-5 text-gray-400 mr-3 flex-shrink-0" />
@@ -285,8 +310,9 @@ const SearchModal = ({ open, onOpenChange }: SearchModalProps) => {
             </>
           )}
         </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
