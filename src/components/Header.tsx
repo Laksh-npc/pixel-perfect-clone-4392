@@ -54,7 +54,7 @@ const Header = () => {
               <img 
                 src="/groww-logo.svg" 
                 alt="Groww DSFM" 
-                className="w-10 h-10 flex-shrink-0"
+                className="w-10 h-10 flex-shrink-0 rounded-full"
               />
               <span className="text-xl font-semibold text-gray-900">Groww DSFM</span>
             </button>

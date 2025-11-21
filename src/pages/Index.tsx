@@ -154,17 +154,17 @@ const Index = () => {
   }, []);
 
   const mtfStocks = [
-    { logo: "MD", name: "Mazagon Dock Ship", symbol: "MAZAGONDOCK", price: "₹4,206.80", change: "309.80", percent: "(7.95%)", positive: true },
-    { logo: "BSE", name: "BSE", symbol: "BSE", price: "₹200.35", change: "4.46", percent: "(2.28%)", positive: true },
-    { logo: "SS", name: "Sai Silks (Kalaman)", symbol: "SAISILK", price: "₹3,135.20", change: "469.80", percent: "(17.63%)", positive: true },
-    { logo: "NS", name: "Newgen Software Tech", symbol: "NEWGEN", price: "₹251.97", change: "-20.06", percent: "(7.37%)", positive: false },
+    { logo: "ITC", name: "ITC Limited", symbol: "ITC", price: "₹4,206.80", change: "309.80", percent: "(7.95%)", positive: true },
+    { logo: "HDFC", name: "HDFC Bank Limited", symbol: "HDFCBANK", price: "₹200.35", change: "4.46", percent: "(2.28%)", positive: true },
+    { logo: "ICICI", name: "ICICI Bank Limited", symbol: "ICICIBANK", price: "₹3,135.20", change: "469.80", percent: "(17.63%)", positive: true },
+    { logo: "SBIN", name: "State Bank of India", symbol: "SBIN", price: "₹251.97", change: "-20.06", percent: "(7.37%)", positive: false },
   ];
 
   const intradayScreenerStocks = [
-    { logo: "N", name: "Netweb Technologies", symbol: "NETWEB", price: "₹4,206.80", change: "309.80", percent: "(7.95%)", positive: true },
-    { logo: "SS", name: "Sai Silks (Kalaman)", symbol: "SAISILK", price: "₹200.35", change: "4.46", percent: "(2.28%)", positive: true },
-    { logo: "T", name: "Cartrade Tech", symbol: "CARTECH", price: "₹3,135.20", change: "469.80", percent: "(17.63%)", positive: true },
-    { logo: "E", name: "EPack Prefab Techno.", symbol: "EPACK", price: "₹251.97", change: "-20.06", percent: "(7.37%)", positive: false },
+    { logo: "WIPRO", name: "Wipro Limited", symbol: "WIPRO", price: "₹4,206.80", change: "309.80", percent: "(7.95%)", positive: true },
+    { logo: "LT", name: "Larsen & Toubro", symbol: "LT", price: "₹200.35", change: "4.46", percent: "(2.28%)", positive: true },
+    { logo: "AXIS", name: "Axis Bank Limited", symbol: "AXISBANK", price: "₹3,135.20", change: "469.80", percent: "(17.63%)", positive: true },
+    { logo: "BHARTI", name: "Bharti Airtel Limited", symbol: "BHARTIARTL", price: "₹251.97", change: "-20.06", percent: "(7.37%)", positive: false },
   ];
 
   const etfs = [
