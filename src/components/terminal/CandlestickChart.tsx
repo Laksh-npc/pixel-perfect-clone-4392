@@ -32,27 +32,16 @@ const timeframes = [
   { label: "1D", value: "1d" },
 ];
 
-// Custom Cursor - Returns SVG props for dashed line
+// Custom Cursor - Returns SVG props for vertical line matching Groww
 const getCustomCursor = (theme: string) => {
   return {
-    stroke: theme === "dark" ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.15)",
-    strokeWidth: 1,
-    strokeDasharray: "5 5",
+    fill: "none",
   };
 };
 
-// Memoized custom tooltip to prevent re-renders
-// Updates parent OHLC display via callbacks
-// Hidden tooltip - we only use it for hover tracking, display is in header
-const CustomTooltip = memo(({ active, payload, coordinate, onShow, onHide }: any) => {
-  // Update parent when tooltip shows/hides
-  if (active && payload && payload.length && payload[0]?.payload) {
-    onShow?.(payload[0].payload);
-  } else if (!active) {
-    onHide?.();
-  }
-
-  // Return null - we don't want to show a tooltip box, just track hover
+// Memoized custom tooltip - now simplified to just track hover without causing renders
+const CustomTooltip = memo(({ active, payload }: any) => {
+  // Return null - we're handling hover via mouse events instead
   return null;
 });
 
@@ -151,11 +140,29 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  // Use refs to track hovered data without causing re-renders
+  // Use refs to track state without triggering re-renders
   const hoveredDataRef = useRef<any>(null);
   const chartContainerRef = useRef<HTMLDivElement>(null);
-  // Separate state for OHLC display to avoid chart re-renders
+  const svgRef = useRef<any>(null);
+  const mousePositionRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  
+  // Separate state for OHLC display - only for header update
   const [displayOHLC, setDisplayOHLC] = useState<any>(null);
+  
+  // Overlay state - kept separate to minimize re-renders
+  const [overlayState, setOverlayState] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+    price: number;
+    date: string;
+  }>({
+    visible: false,
+    x: 0,
+    y: 0,
+    price: 0,
+    date: "",
+  });
 
   const priceInfo = stockDetails?.priceInfo || {};
   const info = stockDetails?.info || {};
@@ -451,21 +458,81 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
     }));
   }, [chartData]);
 
-  // Memoized timeframe change handler
+// Memoized timeframe change handler
   const handleTimeframeChange = useCallback((timeframe: string) => {
     setSelectedPeriod(timeframe);
+    setDisplayOHLC(null);
+    setOverlayState(prev => ({ ...prev, visible: false }));
   }, []);
 
-  // Update OHLC display on hover (without triggering chart re-render)
-  // MUST be defined before any early returns (Rules of Hooks)
-  const handleTooltipShow = useCallback((payload: any) => {
-    if (payload) {
-      hoveredDataRef.current = payload;
-      setDisplayOHLC(payload);
+  // Mouse event handlers for smooth hover - updates refs only
+  const handleChartMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!chartContainerRef.current) return;
+    
+    const rect = chartContainerRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    // Get chart boundaries (accounting for margins in ResponsiveContainer)
+    const chartHeight = rect.height;
+    const chartWidth = rect.width;
+    
+    const leftMargin = 10;
+    const rightMargin = 60;
+    const topMargin = 10;
+    const bottomMargin = 80;
+    
+    const chartArea = {
+      left: leftMargin,
+      right: chartWidth - rightMargin,
+      top: topMargin,
+      bottom: chartHeight - bottomMargin,
+    };
+    
+    // Check if cursor is in chart area
+    if (
+      x < chartArea.left ||
+      x > chartArea.right ||
+      y < chartArea.top ||
+      y > chartArea.bottom
+    ) {
+      setOverlayState(prev => ({ ...prev, visible: false }));
+      return;
     }
-  }, []);
-  
-  const handleTooltipHide = useCallback(() => {
+    
+    // Calculate position in chart coordinates (0 to 1)
+    const normalizedX = (x - chartArea.left) / (chartArea.right - chartArea.left);
+    const chartDataIndex = Math.max(
+      0,
+      Math.min(
+        chartDataFormatted.length - 1,
+        Math.round(normalizedX * (chartDataFormatted.length - 1))
+      )
+    );
+    
+    if (chartDataIndex >= 0 && chartDataIndex < chartDataFormatted.length) {
+      const dataPoint = chartDataFormatted[chartDataIndex];
+      hoveredDataRef.current = dataPoint;
+      
+      // Only update state if data actually changed
+      setDisplayOHLC(prev => {
+        if (prev?.date === dataPoint.date) return prev;
+        return dataPoint;
+      });
+      
+      // Update overlay with smooth position and data
+      setOverlayState({
+        visible: true,
+        x,
+        y,
+        price: dataPoint.close || dataPoint.high || 0,
+        date: new Date(dataPoint.date).toISOString(),
+      });
+    }
+  }, [chartDataFormatted]);
+
+  const handleChartMouseLeave = useCallback(() => {
+    setOverlayState(prev => ({ ...prev, visible: false }));
     setDisplayOHLC(null);
     hoveredDataRef.current = null;
   }, []);
@@ -528,59 +595,56 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
 
   return (
     <div className="flex-1 flex flex-col bg-background overflow-hidden" ref={chartContainerRef}>
-      {/* Stock Info Header - Matching Groww layout */}
-      <div className="px-4 py-2 border-b border-border bg-muted/30 flex items-center justify-between">
+      {/* Stock Info Header - Matching Groww layout exactly */}
+      <div className="px-4 py-3 border-b border-border bg-muted/40 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div>
-            <h2 className="text-base font-bold text-foreground">{info.companyName || symbol}</h2>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-              <span className="font-medium">5m</span>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-bold text-foreground">{info.companyName || symbol}</h2>
+              <button className="text-muted-foreground hover:text-foreground">
+                <span className="text-lg">⊕</span>
+              </button>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+              <span className="font-medium">{selectedPeriod === '1d' ? '5m' : selectedPeriod === '5d' ? '1d' : selectedPeriod}</span>
               <span>·</span>
               <span>{info.symbol || symbol}</span>
               <span>·</span>
               <span>NSE</span>
             </div>
           </div>
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">
-              <BarChart3 className="w-3 h-3 mr-1" />
+          <div className="flex items-center gap-1 ml-4">
+            <Button variant="ghost" size="sm" className="h-8 px-3 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted">
+              <BarChart3 className="w-4 h-4 mr-1.5" />
               Indicators
             </Button>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="h-7 w-7">
-            <Undo2 className="w-3 h-3" />
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:bg-muted">
+            <Undo2 className="w-4 h-4" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7">
-            <Redo2 className="w-3 h-3" />
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:bg-muted">
+            <Redo2 className="w-4 h-4" />
           </Button>
         </div>
       </div>
 
       {/* OHLC Display - Always visible, matching Groww - Updates on hover */}
-      <div className="px-4 py-1.5 border-b border-border bg-muted/20 flex items-center gap-4 text-xs">
-        <div className="flex items-center gap-2">
+      <div className="px-4 py-2 border-b border-border bg-muted/20 flex items-center gap-6 text-xs font-medium">
+        <div className="flex items-center gap-4">
           {displayOHLC ? (
-            // Hover mode: Show full OHLC like "ITC · 5 · NSE O407.75 H407.85 L407.55 C407.55 -0.10 (-0.02%)"
-            <>
-              <span className="text-foreground font-medium">{info.symbol || symbol}</span>
+            // Hover mode: Show full OHLC like Groww's format
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-foreground font-semibold">{info.symbol || symbol}</span>
               <span className="text-muted-foreground">·</span>
-              <span className="text-muted-foreground">5</span>
+              <span className="text-muted-foreground">{selectedPeriod === '1d' ? '5' : selectedPeriod === '5d' ? '1' : '60'}</span>
               <span className="text-muted-foreground">·</span>
               <span className="text-muted-foreground">NSE</span>
-              <span className="text-muted-foreground ml-1">
-                O{displayData.open?.toFixed(2) || open.toFixed(2)}
-              </span>
-              <span className="text-green-500 dark:text-green-400">
-                H{displayData.high?.toFixed(2) || high.toFixed(2)}
-              </span>
-              <span className="text-red-500 dark:text-red-400">
-                L{displayData.low?.toFixed(2) || low.toFixed(2)}
-              </span>
-              <span className="text-muted-foreground">
-                C{displayData.close?.toFixed(2) || close.toFixed(2)}
-              </span>
+              <span className="text-muted-foreground ml-2">O<span className="ml-1 font-semibold text-foreground">{displayData.open?.toFixed(2) || open.toFixed(2)}</span></span>
+              <span className="text-green-500 dark:text-green-400">H<span className="ml-1 font-semibold">{displayData.high?.toFixed(2) || high.toFixed(2)}</span></span>
+              <span className="text-red-500 dark:text-red-400">L<span className="ml-1 font-semibold">{displayData.low?.toFixed(2) || low.toFixed(2)}</span></span>
+              <span className="text-muted-foreground">C<span className="ml-1 font-semibold text-foreground">{displayData.close?.toFixed(2) || close.toFixed(2)}</span></span>
               {(() => {
                 const hoverOpen = displayData.open || open;
                 const hoverClose = displayData.close || close;
@@ -588,43 +652,53 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
                 const hoverPercent = hoverOpen > 0 ? ((hoverChange / hoverOpen) * 100) : 0;
                 const hoverIsPositive = hoverChange >= 0;
                 return (
-                  <span className={`ml-1 ${hoverIsPositive ? "text-green-500 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}>
+                  <span className={`font-semibold ${hoverIsPositive ? "text-green-500 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}>
                     {hoverIsPositive ? "+" : ""}{hoverChange.toFixed(2)} ({hoverIsPositive ? "+" : ""}{hoverPercent.toFixed(2)}%)
                   </span>
                 );
               })()}
-            </>
+            </div>
           ) : (
             // Default mode: Show separated OHLC values
             <>
-              <span className="text-muted-foreground">O<span className="ml-1 font-medium text-foreground">{open.toFixed(2)}</span></span>
-              <span className="text-green-500 dark:text-green-400 font-medium">H<span className="ml-1 font-semibold">{high.toFixed(2)}</span></span>
-              <span className="text-red-500 dark:text-red-400 font-medium">L<span className="ml-1 font-semibold">{low.toFixed(2)}</span></span>
-              <span className="text-muted-foreground">C<span className="ml-1 font-medium text-foreground">{close.toFixed(2)}</span></span>
-              <span className={`font-medium ${isPositive ? "text-green-500 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}>
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground">O</span>
+                <span className="font-semibold text-foreground">{open.toFixed(2)}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-green-500 dark:text-green-400">H</span>
+                <span className="font-semibold text-green-500 dark:text-green-400">{high.toFixed(2)}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-red-500 dark:text-red-400">L</span>
+                <span className="font-semibold text-red-500 dark:text-red-400">{low.toFixed(2)}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground">C</span>
+                <span className="font-semibold text-foreground">{close.toFixed(2)}</span>
+              </div>
+              <div className={`font-semibold ${isPositive ? "text-green-500 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}>
                 {isPositive ? "+" : ""}
                 {change.toFixed(2)} ({isPositive ? "+" : ""}
                 {percentChange.toFixed(2)}%)
-              </span>
+              </div>
             </>
           )}
         </div>
-        <div className="text-muted-foreground ml-auto">
+        <div className="text-muted-foreground ml-auto flex items-center gap-2">
+          <span>Volume</span>
           {displayOHLC && displayData.volume !== undefined && displayData.volume > 0 ? (
-            <>
-              Volume{" "}
-              <span className="font-medium">
-                {displayData.volume >= 1000000
-                  ? `${(displayData.volume / 1000000).toFixed(2)}M`
-                  : displayData.volume >= 1000
-                  ? `${(displayData.volume / 1000).toFixed(2)}K`
-                  : displayData.volume.toFixed(0)}
-              </span>
-            </>
+            <span className="font-semibold">
+              {displayData.volume >= 1000000
+                ? `${(displayData.volume / 1000000).toFixed(2)}M`
+                : displayData.volume >= 1000
+                ? `${(displayData.volume / 1000).toFixed(2)}K`
+                : displayData.volume.toFixed(0)}
+            </span>
           ) : (
             <>
-              Volume SMA 9{" "}
-              <span className="font-medium">
+              <span>SMA 9</span>
+              <span className="font-semibold">
                 {averageVolume >= 1000000
                   ? `${(averageVolume / 1000000).toFixed(2)}M`
                   : averageVolume >= 1000
@@ -637,11 +711,105 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
       </div>
 
       {/* Chart Area - Using ResponsiveContainer for smooth resize */}
-      <div className="flex-1 relative min-h-[500px]" style={{ minHeight: "500px" }}>
+      <div 
+        className="flex-1 relative min-h-[500px]" 
+        style={{ minHeight: "500px" }}
+        ref={chartContainerRef}
+        onMouseMove={handleChartMouseMove}
+        onMouseLeave={handleChartMouseLeave}
+      >
+        {/* Crosshair and overlay - rendered with transform for performance */}
+        {overlayState.visible && (
+          <>
+            {/* Crosshair lines - using absolute positioning for smoothness */}
+            <svg
+              className="absolute inset-0 w-full h-full pointer-events-none z-30"
+              style={{ overflow: "visible" }}
+            >
+              <defs>
+                <filter id="glow">
+                  <feGaussianBlur stdDeviation="0.5" result="coloredBlur" />
+                  <feMerge>
+                    <feMergeNode in="coloredBlur" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+              </defs>
+              
+              {/* Vertical line */}
+              <line
+                x1={overlayState.x}
+                y1="0"
+                x2={overlayState.x}
+                y2="100%"
+                stroke="rgba(255, 255, 255, 0.12)"
+                strokeWidth="1"
+                vectorEffect="non-scaling-stroke"
+                filter="url(#glow)"
+              />
+              
+              {/* Horizontal line */}
+              <line
+                x1="0"
+                y1={overlayState.y}
+                x2="100%"
+                y2={overlayState.y}
+                stroke="rgba(255, 255, 255, 0.12)"
+                strokeWidth="1"
+                vectorEffect="non-scaling-stroke"
+                filter="url(#glow)"
+              />
+              
+              {/* Center plus icon */}
+              <g transform={`translate(${overlayState.x}, ${overlayState.y})`} filter="url(#glow)">
+                <circle cx="0" cy="0" r="4" fill="none" stroke="rgba(255, 255, 255, 0.5)" strokeWidth="1.2" />
+                <line x1="-3" y1="0" x2="3" y2="0" stroke="rgba(255, 255, 255, 0.6)" strokeWidth="1.5" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+                <line x1="0" y1="-3" x2="0" y2="3" stroke="rgba(255, 255, 255, 0.6)" strokeWidth="1.5" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+              </g>
+            </svg>
+
+            {/* Price overlay box - Groww style */}
+            <div
+              className="absolute bg-black/90 px-3 py-1.5 rounded text-xs font-bold text-white shadow-xl border border-white/20 z-40 whitespace-nowrap"
+              style={{
+                pointerEvents: "none",
+                top: `${Math.max(10, overlayState.y - 30)}px`,
+                right: "15px",
+                backdropFilter: "blur(4px)",
+                transform: "translateZ(0)",
+                willChange: "top",
+              }}
+            >
+              ⊕ {overlayState.price.toFixed(2)}
+            </div>
+
+            {/* Date/Time overlay box - Groww style */}
+            <div
+              className="absolute bg-black/90 px-3 py-1.5 rounded text-xs font-semibold text-white shadow-xl border border-white/20 z-40 text-center"
+              style={{
+                pointerEvents: "none",
+                bottom: "85px",
+                left: "50%",
+                transform: "translateX(-50%) translateZ(0)",
+                backdropFilter: "blur(4px)",
+                willChange: "transform",
+              }}
+            >
+              {format(new Date(overlayState.date), "dd MMM yy · HH:mm")}
+            </div>
+          </>
+        )}
+
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
             data={chartDataFormatted}
             margin={{ top: 10, right: 60, left: 10, bottom: 80 }}
+            onMouseMove={(state: any) => {
+              // Capture SVG reference from Recharts
+              if (state?.chartX !== undefined && state?.chartY !== undefined) {
+                mousePositionRef.current = { x: state.chartX, y: state.chartY };
+              }
+            }}
           >
             <defs>
               <linearGradient id="volumeGradientUp" x1="0" y1="0" x2="0" y2="1">
@@ -691,8 +859,8 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
               hide
             />
             <Tooltip 
-              content={<CustomTooltip onShow={handleTooltipShow} onHide={handleTooltipHide} />}
-              cursor={getCustomCursor(theme)}
+              content={<CustomTooltip />}
+              cursor={false}
               animationDuration={0}
               trigger="hover"
               allowEscapeViewBox={{ x: false, y: false }}
@@ -753,8 +921,8 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
         </ResponsiveContainer>
       </div>
 
-      {/* Bottom Controls - Matching Groww */}
-      <div className="px-4 py-2 border-t border-border bg-muted/30 flex items-center justify-between">
+      {/* Bottom Controls - Matching Groww layout */}
+      <div className="px-4 py-3 border-t border-border bg-muted/30 flex items-center justify-between">
         <div className="flex items-center gap-2">
           {timeframes.map((tf) => (
             <Button
@@ -762,29 +930,44 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
               variant="ghost"
               size="sm"
               onClick={() => handleTimeframeChange(tf.value)}
-              className={`h-7 px-3 text-xs ${
+              className={`h-8 px-4 text-xs font-medium transition-all ${
                 selectedPeriod === tf.value
                   ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                  : "text-muted-foreground hover:bg-muted"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
               }`}
             >
               {tf.label}
             </Button>
           ))}
-          <Button variant="ghost" size="icon" className="h-7 w-7">
-            <Calendar className="w-3 h-3" />
+          <div className="w-px h-6 bg-border mx-1" />
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:bg-muted">
+            <Calendar className="w-4 h-4" />
           </Button>
         </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span>{format(new Date(), "HH:mm:ss 'UTC+5:30'")}</span>
+        <div className="flex items-center gap-4 text-xs">
+          <div className="text-muted-foreground">
+            <span>{format(new Date(), "HH:mm:ss")} (UTC+5:30)</span>
+          </div>
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-7 px-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
               %
             </Button>
-            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-7 px-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
               log
             </Button>
-            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-7 px-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground font-medium"
+            >
               auto
             </Button>
           </div>

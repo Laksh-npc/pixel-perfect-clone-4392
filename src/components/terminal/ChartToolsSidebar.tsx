@@ -37,7 +37,7 @@ const ChartToolsSidebar = memo(() => {
   ];
 
   return (
-    <div className="w-12 bg-muted/30 border-r border-border flex flex-col items-center py-2 gap-1">
+    <div className="w-12 bg-muted/50 border-r border-border flex flex-col items-center py-3 gap-1.5">
       {tools.map((tool, index) => {
         const Icon = tool.icon;
         return (
@@ -45,10 +45,10 @@ const ChartToolsSidebar = memo(() => {
             key={index}
             variant="ghost"
             size="icon"
-            className="h-8 w-8 text-muted-foreground hover:bg-muted hover:text-foreground rounded-md"
+            className="h-9 w-9 text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg transition-colors"
             title={tool.label}
           >
-            <Icon className="w-4 h-4" />
+            <Icon className="w-4.5 h-4.5" />
           </Button>
         );
       })}
@@ -56,10 +56,10 @@ const ChartToolsSidebar = memo(() => {
       <Button
         variant="ghost"
         size="icon"
-        className="h-8 w-8 text-muted-foreground hover:bg-muted hover:text-foreground rounded-md mt-auto"
+        className="h-9 w-9 text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg mt-auto transition-colors"
         title="Settings"
       >
-        <Settings className="w-4 h-4" />
+        <Settings className="w-4.5 h-4.5" />
       </Button>
     </div>
   );

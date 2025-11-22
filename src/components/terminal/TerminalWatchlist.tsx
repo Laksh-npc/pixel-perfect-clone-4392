@@ -67,14 +67,15 @@ const TerminalWatchlist = memo(() => {
 
   if (!isOpen) {
     return (
-      <div className="w-8 bg-muted/30 border-l border-border flex flex-col items-center py-2">
+      <div className="w-10 bg-muted/50 border-l border-border flex flex-col items-center py-3 gap-2">
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setIsOpen(true)}
-          className="h-8 w-8 text-muted-foreground hover:bg-muted"
+          className="h-9 w-9 text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg"
+          title="Watchlist"
         >
-          <FileText className="w-4 h-4" />
+          <FileText className="w-5 h-5" />
         </Button>
       </div>
     );
@@ -82,15 +83,15 @@ const TerminalWatchlist = memo(() => {
 
   return (
     <>
-      <div className="w-64 bg-background border-l border-border flex flex-col h-full">
+      <div className="w-80 bg-background/95 border-l border-border flex flex-col h-full">
         {/* Watchlist Header */}
-        <div className="px-3 py-2 border-b border-border flex items-center justify-between">
-          <span className="text-sm font-semibold text-foreground">:: Watchlist</span>
+        <div className="px-4 py-3 border-b border-border flex items-center justify-between bg-muted/30">
+          <span className="text-sm font-bold text-foreground">Watchlist</span>
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setIsOpen(false)}
-            className="h-6 w-6 text-muted-foreground hover:bg-muted"
+            className="h-7 w-7 text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg"
           >
             <X className="w-4 h-4" />
           </Button>
@@ -99,54 +100,65 @@ const TerminalWatchlist = memo(() => {
         {/* Watchlist Content */}
         {activeSection === "watchlist" && (
           <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="p-3 border-b border-border">
-              <div className="flex items-center justify-between mb-2">
+            <div className="p-4 border-b border-border bg-muted/20">
+              <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-muted-foreground">{watchlistName}</span>
-                  <Button variant="ghost" size="icon" className="h-5 w-5">
-                    <Edit2 className="w-3 h-3" />
+                  <span className="text-sm font-semibold text-foreground">{watchlistName}</span>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-6 w-6 text-muted-foreground hover:bg-muted hover:text-foreground rounded"
+                  >
+                    <Edit2 className="w-3.5 h-3.5" />
                   </Button>
                 </div>
-                <Button variant="ghost" size="icon" className="h-5 w-5">
-                  <Plus className="w-3 h-3" />
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-6 w-6 text-muted-foreground hover:bg-muted hover:text-foreground rounded"
+                >
+                  <Plus className="w-4 h-4" />
                 </Button>
               </div>
               <div className="relative">
-                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="Q Search & add"
+                  placeholder="Search & add"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-7 h-8 text-xs bg-muted/50 border-border"
+                  className="pl-9 h-9 text-sm bg-muted/50 border-border focus:bg-background rounded-lg"
                 />
               </div>
             </div>
 
             <div className="flex-1 overflow-y-auto">
               {loading ? (
-                <div className="p-3 space-y-2">
+                <div className="p-4 space-y-3">
                   {[1, 2, 3, 4, 5].map((i) => (
-                    <Skeleton key={i} className="h-16 w-full" />
+                    <Skeleton key={i} className="h-20 w-full rounded-lg" />
                   ))}
                 </div>
               ) : (
-                <div className="p-2 space-y-1">
+                <div className="p-3 space-y-2">
                   {watchlistStocks.map((stock, index) => {
                     const isPositive = stock.percentChange >= 0;
                     return (
                       <div
                         key={index}
                         onClick={() => navigate(`/terminal/${stock.symbol}`)}
-                        className="p-2 rounded-md hover:bg-muted cursor-pointer transition-colors"
+                        className="p-3 rounded-lg hover:bg-muted/60 cursor-pointer transition-colors border border-transparent hover:border-border/50"
                       >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-medium text-foreground">{stock.name}</span>
+                        <div className="flex items-center justify-between mb-2">
+                          <div>
+                            <div className="text-sm font-semibold text-foreground">{stock.name}</div>
+                            <div className="text-xs text-muted-foreground">{stock.symbol}</div>
+                          </div>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-semibold text-foreground">
+                          <span className="text-sm font-bold text-foreground">
                             ₹{stock.price.toFixed(2)}
                           </span>
-                          <span className={`text-xs font-medium ${isPositive ? "text-green-500 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}>
+                          <span className={`text-xs font-semibold ${isPositive ? "text-green-500 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}>
                             {isPositive ? "+" : ""}
                             {stock.change.toFixed(2)} ({isPositive ? "+" : ""}
                             {stock.percentChange.toFixed(2)}%)
@@ -169,8 +181,8 @@ const TerminalWatchlist = memo(() => {
         )}
       </div>
 
-      {/* Right Side Toolbar - Separate from watchlist */}
-      <div className="w-8 bg-muted/30 border-l border-border flex flex-col items-center py-2">
+      {/* Right Side Toolbar - Sections selector */}
+      <div className="w-12 bg-muted/50 border-l border-border flex flex-col items-center py-3 gap-1">
         {sections.map((section) => {
           const Icon = section.icon;
           return (
@@ -179,14 +191,14 @@ const TerminalWatchlist = memo(() => {
               variant="ghost"
               size="icon"
               onClick={() => setActiveSection(section.id)}
-              className={`h-8 w-8 mb-1 ${
+              className={`h-9 w-9 rounded-lg ${
                 activeSection === section.id
                   ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                  : "text-muted-foreground hover:bg-muted"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
               }`}
               title={section.label}
             >
-              <Icon className="w-4 h-4" />
+              <Icon className="w-4.5 h-4.5" />
             </Button>
           );
         })}
@@ -194,10 +206,10 @@ const TerminalWatchlist = memo(() => {
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-muted-foreground hover:bg-muted"
+          className="h-9 w-9 text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg"
           title="Layout"
         >
-          <Layout className="w-4 h-4" />
+          <Layout className="w-4.5 h-4.5" />
         </Button>
       </div>
     </>

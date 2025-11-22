@@ -57,50 +57,50 @@ const TerminalHeader = memo(({ symbol, stockDetails }: TerminalHeaderProps) => {
   };
 
   return (
-    <header className="border-b border-border bg-background">
-      <div className="flex items-center justify-between px-4 h-12">
-        {/* Left - Logo */}
-        <div className="flex items-center gap-4">
+    <header className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="flex items-center justify-between px-4 h-16">
+        {/* Left - Logo and Search */}
+        <div className="flex items-center gap-6 flex-1">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary via-cyan-400 to-blue-500 flex items-center justify-center">
               <div className="w-4 h-4 bg-white rounded-full"></div>
             </div>
             <span className="text-base font-semibold text-foreground">Groww Terminal</span>
           </div>
-        </div>
-
-        {/* Center - Search */}
-        <div className="flex-1 max-w-md mx-8">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Search for Stocks, F&O, Indices etc."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-9 text-sm bg-muted/50 border-border focus:bg-background"
-            />
+          
+          {/* Search Input */}
+          <div className="flex-1 max-w-sm">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search for Stocks, F&O, Indices etc."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 h-10 text-sm bg-muted/50 border-border focus:bg-background"
+              />
+            </div>
           </div>
         </div>
 
         {/* Right - Indices and Actions */}
-        <div className="flex items-center gap-4">
-          {/* Indices */}
+        <div className="flex items-center gap-6">
+          {/* Indices Display - Matching Groww screenshot */}
           {loading ? (
-            <div className="flex gap-4">
-              <Skeleton className="h-6 w-20" />
-              <Skeleton className="h-6 w-20" />
-              <Skeleton className="h-6 w-24" />
+            <div className="flex gap-6">
+              <Skeleton className="h-7 w-28" />
+              <Skeleton className="h-7 w-28" />
+              <Skeleton className="h-7 w-32" />
             </div>
           ) : indices.length > 0 ? (
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-6">
               {indices.slice(0, 3).map((idx: any, i: number) => {
                 const isPositive = (idx.variation || 0) >= 0;
                 return (
-                  <div key={i} className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-muted-foreground">{getIndexDisplay(idx.index)}:</span>
-                    <span className="text-xs font-semibold text-foreground">{formatIndexValue(idx.last || 0)}</span>
+                  <div key={i} className="flex items-center gap-3">
+                    <span className="text-sm font-bold text-foreground">{getIndexDisplay(idx.index)}</span>
+                    <span className="text-sm font-semibold text-foreground">{formatIndexValue(idx.last || 0)}</span>
                     <span
-                      className={`text-xs font-medium ${isPositive ? "text-green-500 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}
+                      className={`text-sm font-semibold ${isPositive ? "text-green-500 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}
                     >
                       {isPositive ? "+" : ""}
                       {(idx.variation || 0).toFixed(2)} ({isPositive ? "+" : ""}
@@ -109,47 +109,49 @@ const TerminalHeader = memo(({ symbol, stockDetails }: TerminalHeaderProps) => {
                   </div>
                 );
               })}
-              <button className="text-xs text-primary hover:underline flex items-center gap-1">
-                All indices
-                <ChevronRight className="w-3 h-3" />
-              </button>
             </div>
           ) : (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              Loading indices...
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              Loading...
             </div>
           )}
 
-          {/* Theme Toggle */}
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-8 w-8 text-muted-foreground hover:bg-muted"
-            onClick={toggleTheme}
-          >
-            {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-          </Button>
+          {/* Divider */}
+          <div className="h-6 w-px bg-border" />
 
-          {/* Buy/Sell Buttons */}
-          <div className="flex items-center gap-2">
-            <Button className="h-8 w-8 p-0 bg-green-500 hover:bg-green-600 text-white font-bold text-sm">
-              B
+          {/* Action Buttons */}
+          <div className="flex items-center gap-3">
+            {/* Theme Toggle */}
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-9 w-9 text-muted-foreground hover:bg-muted rounded-lg"
+              onClick={toggleTheme}
+            >
+              {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </Button>
-            <Button className="h-8 w-8 p-0 bg-red-500 hover:bg-red-600 text-white font-bold text-sm">
-              S
+
+            {/* Buy/Sell Buttons - Matching Groww layout */}
+            <div className="flex items-center gap-2">
+              <Button className="h-9 w-9 p-0 bg-green-500 hover:bg-green-600 text-white font-bold rounded-lg">
+                B
+              </Button>
+              <Button className="h-9 w-9 p-0 bg-red-500 hover:bg-red-600 text-white font-bold rounded-lg">
+                S
+              </Button>
+            </div>
+
+            {/* Settings and Actions */}
+            <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:bg-muted rounded-lg">
+              <Settings className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:bg-muted rounded-lg">
+              <Camera className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:bg-muted rounded-lg">
+              <Layout className="w-4 h-4" />
             </Button>
           </div>
-
-          {/* Settings and Actions */}
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:bg-muted">
-            <Settings className="w-4 h-4" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:bg-muted">
-            <Camera className="w-4 h-4" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:bg-muted">
-            <Layout className="w-4 h-4" />
-          </Button>
         </div>
       </div>
     </header>
