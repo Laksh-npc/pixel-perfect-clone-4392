@@ -32,9 +32,19 @@ const timeframes = [
   { label: "1D", value: "1d" },
 ];
 
+// Custom Cursor - Returns SVG props for dashed line
+const getCustomCursor = (theme: string) => {
+  return {
+    stroke: theme === "dark" ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.15)",
+    strokeWidth: 1,
+    strokeDasharray: "5 5",
+  };
+};
+
 // Memoized custom tooltip to prevent re-renders
 // Updates parent OHLC display via callbacks
-const CustomTooltip = memo(({ active, payload, onShow, onHide }: any) => {
+// Hidden tooltip - we only use it for hover tracking, display is in header
+const CustomTooltip = memo(({ active, payload, coordinate, onShow, onHide }: any) => {
   // Update parent when tooltip shows/hides
   if (active && payload && payload.length && payload[0]?.payload) {
     onShow?.(payload[0].payload);
@@ -42,55 +52,8 @@ const CustomTooltip = memo(({ active, payload, onShow, onHide }: any) => {
     onHide?.();
   }
 
-  if (!active || !payload || !payload.length) {
-    return null;
-  }
-
-  const data = payload[0].payload;
-  if (!data) {
-    return null;
-  }
-
-  const dateValue = typeof data.date === 'number' ? new Date(data.date) : new Date(data.date);
-  const timeframe = data.timeframe || "1d";
-
-  return (
-    <div className="bg-background border border-border rounded-lg shadow-lg p-3 z-50 pointer-events-none">
-      <p className="text-xs text-muted-foreground mb-2 font-semibold">
-        {format(dateValue, timeframe === "1d" || timeframe === "5d" ? "MMM dd, HH:mm" : "MMM dd, yyyy")}
-      </p>
-      <div className="space-y-1">
-        <div className="flex justify-between gap-4">
-          <span className="text-xs text-muted-foreground">O:</span>
-          <span className="text-xs font-semibold">₹{data.open?.toFixed(2) || "0.00"}</span>
-        </div>
-        <div className="flex justify-between gap-4">
-          <span className="text-xs text-muted-foreground">H:</span>
-          <span className="text-xs font-semibold text-green-500 dark:text-green-400">₹{data.high?.toFixed(2) || "0.00"}</span>
-        </div>
-        <div className="flex justify-between gap-4">
-          <span className="text-xs text-muted-foreground">L:</span>
-          <span className="text-xs font-semibold text-red-500 dark:text-red-400">₹{data.low?.toFixed(2) || "0.00"}</span>
-        </div>
-        <div className="flex justify-between gap-4">
-          <span className="text-xs text-muted-foreground">C:</span>
-          <span className="text-xs font-semibold">₹{data.close?.toFixed(2) || "0.00"}</span>
-        </div>
-        {data.volume !== undefined && (
-          <div className="flex justify-between gap-4 pt-1 border-t border-border mt-1">
-            <span className="text-xs text-muted-foreground">Volume:</span>
-            <span className="text-xs font-semibold">
-              {data.volume >= 1000000
-                ? `${(data.volume / 1000000).toFixed(2)}M`
-                : data.volume >= 1000
-                ? `${(data.volume / 1000).toFixed(2)}K`
-                : data.volume.toFixed(0)}
-            </span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+  // Return null - we don't want to show a tooltip box, just track hover
+  return null;
 });
 
 CustomTooltip.displayName = "CustomTooltip";
@@ -595,28 +558,81 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
         </div>
       </div>
 
-      {/* OHLC Display - Always visible, matching Groww */}
+      {/* OHLC Display - Always visible, matching Groww - Updates on hover */}
       <div className="px-4 py-1.5 border-b border-border bg-muted/20 flex items-center gap-4 text-xs">
-        <div className="flex items-center gap-3">
-          <span className="text-muted-foreground">O<span className="ml-1 font-medium text-foreground">{displayData.open?.toFixed(2) || open.toFixed(2)}</span></span>
-          <span className="text-green-500 dark:text-green-400 font-medium">H<span className="ml-1 font-semibold">{displayData.high?.toFixed(2) || high.toFixed(2)}</span></span>
-          <span className="text-red-500 dark:text-red-400 font-medium">L<span className="ml-1 font-semibold">{displayData.low?.toFixed(2) || low.toFixed(2)}</span></span>
-          <span className="text-muted-foreground">C<span className="ml-1 font-medium text-foreground">{displayData.close?.toFixed(2) || close.toFixed(2)}</span></span>
-          <span className={`font-medium ${isPositive ? "text-green-500 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}>
-            {isPositive ? "+" : ""}
-            {change.toFixed(2)} ({isPositive ? "+" : ""}
-            {percentChange.toFixed(2)}%)
-          </span>
+        <div className="flex items-center gap-2">
+          {displayOHLC ? (
+            // Hover mode: Show full OHLC like "ITC · 5 · NSE O407.75 H407.85 L407.55 C407.55 -0.10 (-0.02%)"
+            <>
+              <span className="text-foreground font-medium">{info.symbol || symbol}</span>
+              <span className="text-muted-foreground">·</span>
+              <span className="text-muted-foreground">5</span>
+              <span className="text-muted-foreground">·</span>
+              <span className="text-muted-foreground">NSE</span>
+              <span className="text-muted-foreground ml-1">
+                O{displayData.open?.toFixed(2) || open.toFixed(2)}
+              </span>
+              <span className="text-green-500 dark:text-green-400">
+                H{displayData.high?.toFixed(2) || high.toFixed(2)}
+              </span>
+              <span className="text-red-500 dark:text-red-400">
+                L{displayData.low?.toFixed(2) || low.toFixed(2)}
+              </span>
+              <span className="text-muted-foreground">
+                C{displayData.close?.toFixed(2) || close.toFixed(2)}
+              </span>
+              {(() => {
+                const hoverOpen = displayData.open || open;
+                const hoverClose = displayData.close || close;
+                const hoverChange = hoverClose - hoverOpen;
+                const hoverPercent = hoverOpen > 0 ? ((hoverChange / hoverOpen) * 100) : 0;
+                const hoverIsPositive = hoverChange >= 0;
+                return (
+                  <span className={`ml-1 ${hoverIsPositive ? "text-green-500 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}>
+                    {hoverIsPositive ? "+" : ""}{hoverChange.toFixed(2)} ({hoverIsPositive ? "+" : ""}{hoverPercent.toFixed(2)}%)
+                  </span>
+                );
+              })()}
+            </>
+          ) : (
+            // Default mode: Show separated OHLC values
+            <>
+              <span className="text-muted-foreground">O<span className="ml-1 font-medium text-foreground">{open.toFixed(2)}</span></span>
+              <span className="text-green-500 dark:text-green-400 font-medium">H<span className="ml-1 font-semibold">{high.toFixed(2)}</span></span>
+              <span className="text-red-500 dark:text-red-400 font-medium">L<span className="ml-1 font-semibold">{low.toFixed(2)}</span></span>
+              <span className="text-muted-foreground">C<span className="ml-1 font-medium text-foreground">{close.toFixed(2)}</span></span>
+              <span className={`font-medium ${isPositive ? "text-green-500 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}>
+                {isPositive ? "+" : ""}
+                {change.toFixed(2)} ({isPositive ? "+" : ""}
+                {percentChange.toFixed(2)}%)
+              </span>
+            </>
+          )}
         </div>
         <div className="text-muted-foreground ml-auto">
-          Volume SMA 9{" "}
-          <span className="font-medium">
-            {averageVolume >= 1000000
-              ? `${(averageVolume / 1000000).toFixed(2)}M`
-              : averageVolume >= 1000
-              ? `${(averageVolume / 1000).toFixed(2)}K`
-              : averageVolume.toFixed(0)}
-          </span>
+          {displayOHLC && displayData.volume !== undefined && displayData.volume > 0 ? (
+            <>
+              Volume{" "}
+              <span className="font-medium">
+                {displayData.volume >= 1000000
+                  ? `${(displayData.volume / 1000000).toFixed(2)}M`
+                  : displayData.volume >= 1000
+                  ? `${(displayData.volume / 1000).toFixed(2)}K`
+                  : displayData.volume.toFixed(0)}
+              </span>
+            </>
+          ) : (
+            <>
+              Volume SMA 9{" "}
+              <span className="font-medium">
+                {averageVolume >= 1000000
+                  ? `${(averageVolume / 1000000).toFixed(2)}M`
+                  : averageVolume >= 1000
+                  ? `${(averageVolume / 1000).toFixed(2)}K`
+                  : averageVolume.toFixed(0)}
+              </span>
+            </>
+          )}
         </div>
       </div>
 
@@ -676,11 +692,22 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
             />
             <Tooltip 
               content={<CustomTooltip onShow={handleTooltipShow} onHide={handleTooltipHide} />}
-              cursor={{ stroke: theme === "dark" ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.1)", strokeWidth: 1, strokeDasharray: "5 5" }}
+              cursor={getCustomCursor(theme)}
               animationDuration={0}
               trigger="hover"
               allowEscapeViewBox={{ x: false, y: false }}
             />
+            {/* Custom Crosshair - Horizontal line at hovered price */}
+            {displayOHLC && (
+              <ReferenceLine
+                yAxisId="price"
+                y={displayOHLC.close || displayOHLC.high}
+                stroke={theme === "dark" ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.15)"}
+                strokeWidth={1}
+                strokeDasharray="5 5"
+                ifOverflow="extendDomain"
+              />
+            )}
             <ReferenceLine
               yAxisId="price"
               y={currentPrice}
