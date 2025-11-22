@@ -14,6 +14,9 @@ import DSFMAnalysis from "./pages/DSFMAnalysis";
 import Holdings from "./pages/Holdings";
 import SectorDetail from "./pages/SectorDetail";
 import Balance from "./pages/Balance";
+import IPO from "./pages/IPO";
+import Bonds from "./pages/Bonds";
+import ETFScreener from "./pages/ETFScreener";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -74,6 +77,9 @@ const App = () => (
                 <Route path="/holdings" element={<Holdings />} />
                 <Route path="/sector/:sectorName" element={<SectorDetail />} />
                 <Route path="/balance" element={<Balance />} />
+                <Route path="/ipo" element={<IPO />} />
+                <Route path="/bonds" element={<Bonds />} />
+                <Route path="/etf-screener" element={<ETFScreener />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

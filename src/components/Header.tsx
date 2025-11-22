@@ -1,4 +1,4 @@
-import { Search, Bell, Globe, Network, Terminal } from "lucide-react";
+import { Search, Bell, Terminal, Globe } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useState, useEffect } from "react";
@@ -7,10 +7,14 @@ import SearchModal from "./SearchModal";
 import NotificationPopup from "./NotificationPopup";
 import ProfileDropdown from "./ProfileDropdown";
 import { useTheme } from "@/contexts/ThemeContext";
+import { api } from "@/services/api";
+import { Skeleton } from "./ui/skeleton";
 
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
+  const [indices, setIndices] = useState<Array<{ name: string; value: string; change: string; percent: string; positive: boolean }>>([]);
+  const [loadingIndices, setLoadingIndices] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
   const { theme } = useTheme();
@@ -37,18 +41,85 @@ const Header = () => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  // Fetch market indices
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        setLoadingIndices(true);
+        const res = await api.getIndices();
+        // Map indices to match the display format
+        const indexMap: Record<string, string> = {
+          'NIFTY 50': 'NIFTY',
+          'NIFTY': 'NIFTY',
+          'SENSEX': 'SENSEX',
+          'NIFTY BANK': 'BANKNIFTY',
+          'BANK NIFTY': 'BANKNIFTY',
+          'BANKNIFTY': 'BANKNIFTY',
+          'NIFTY MIDCAP SELECT': 'MIDCPNIFTY',
+          'NIFTY FINANCIAL SERVICES': 'FINNIFTY',
+        };
+        
+        const targetIndices = ['NIFTY', 'SENSEX', 'BANKNIFTY', 'MIDCPNIFTY', 'FINNIFTY'];
+        const mapped: Array<{ name: string; value: string; change: string; percent: string; positive: boolean }> = [];
+        
+        for (const target of targetIndices) {
+          const found = res.find((idx: any) => {
+            const idxName = idx.index || '';
+            return indexMap[idxName] === target || idxName === target;
+          });
+          
+          if (found) {
+            const last = found.last || 0;
+            const variation = found.variation || 0;
+            const percentChange = found.percentChange || 0;
+            const positive = Number(variation) >= 0;
+            mapped.push({
+              name: target,
+              value: typeof last === "number" ? last.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : String(last),
+              change: `${variation >= 0 ? "+" : ""}${typeof variation === "number" ? variation.toFixed(2) : String(variation)}`,
+              percent: `(${variation >= 0 ? "+" : ""}${typeof percentChange === "number" ? percentChange.toFixed(2) : String(percentChange)}%)`,
+              positive,
+            });
+          }
+        }
+        
+        if (isMounted) setIndices(mapped);
+      } catch (e: any) {
+        console.error("Error fetching indices:", e);
+      } finally {
+        if (isMounted) setLoadingIndices(false);
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const handleLogoClick = () => {
     navigate("/");
   };
 
+  const getActiveNav = () => {
+    if (location.pathname === "/") return "explore";
+    if (location.pathname === "/holdings") return "holdings";
+    if (location.pathname.includes("/positions")) return "positions";
+    if (location.pathname.includes("/orders")) return "orders";
+    if (location.pathname.includes("/watchlist")) return "watchlist";
+    return "explore";
+  };
+
+  const activeNav = getActiveNav();
+
   return (
     <>
-      <header className={`border-b sticky top-0 z-50 transition-all duration-300 bg-white dark:bg-[#1a1a1a] border-gray-200 dark:border-gray-800 ${
+      <header className={`sticky top-0 z-50 transition-all duration-300 bg-white dark:bg-[#1a1a1a] ${
         isScrolled 
           ? 'bg-white/95 dark:bg-[#1a1a1a]/95 backdrop-blur-sm shadow-sm' 
           : 'bg-white dark:bg-[#1a1a1a]'
       }`}>
-        <div className="flex items-center justify-between px-6 py-3">
+        {/* Top Header Bar */}
+        <div className="flex items-center justify-between px-6 py-3 border-b border-gray-200 dark:border-gray-800">
           <div className="flex items-center gap-8">
             <button 
               onClick={handleLogoClick}
@@ -56,37 +127,33 @@ const Header = () => {
             >
               <img 
                 src="/groww-logo.svg" 
-                alt="Groww DSFM" 
+                alt="Groww" 
                 className="w-10 h-10 flex-shrink-0 rounded-full"
               />
-              <span className="text-xl font-semibold text-gray-900 dark:text-white">Groww DSFM</span>
             </button>
             <nav className="flex items-center gap-6">
-              <button className="text-sm font-medium text-gray-900 dark:text-white hover:text-gray-700 dark:hover:text-gray-300 transition-colors">Stocks</button>
-              <button className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">F&O</button>
-              <button className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">Mutual Funds</button>
+              <button className="text-sm font-medium text-gray-900 dark:text-white border-b-2 border-gray-900 dark:border-white pb-1 transition-colors">
+                Stocks
+              </button>
+              <button className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+                F&O
+              </button>
+              <button className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+                Mutual Funds
+              </button>
             </nav>
           </div>
           
           <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate("/dsfm-analysis")}
-              className="flex items-center gap-2 text-sm"
-            >
-              <Network className="w-4 h-4" />
-              DSFM Analysis
-            </Button>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input 
                 placeholder="Search Groww..." 
-                className="pl-10 pr-16 w-80 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-sm"
+                className="pl-10 pr-12 w-80 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-sm"
                 onClick={() => setSearchModalOpen(true)}
                 readOnly
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-medium">⌘K</span>
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 dark:text-gray-500 font-medium bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">⌘K</span>
             </div>
             <NotificationPopup>
               <Button variant="ghost" size="icon" className="h-9 w-9">
@@ -97,14 +164,15 @@ const Header = () => {
           </div>
         </div>
         
-        <div className="flex items-center justify-between px-6 border-t border-gray-200 dark:border-gray-800">
+        {/* Secondary Navigation Bar */}
+        <div className="flex items-center justify-between px-6 border-b border-gray-200 dark:border-gray-800">
           <nav className="flex items-center gap-6">
             <button 
               onClick={() => navigate("/")}
               className={`py-3 border-b-2 font-medium text-sm transition-colors ${
-                location.pathname === "/" 
-                  ? "border-blue-600 text-gray-900 dark:text-blue-500 dark:text-white" 
-                  : "border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:border-gray-300 dark:hover:border-gray-600"
+                activeNav === "explore"
+                  ? "border-gray-900 dark:border-white text-gray-900 dark:text-white" 
+                  : "border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
               }`}
             >
               Explore
@@ -112,12 +180,42 @@ const Header = () => {
             <button 
               onClick={() => navigate("/holdings")}
               className={`py-3 border-b-2 font-medium text-sm transition-colors ${
-                location.pathname === "/holdings" 
-                  ? "border-blue-600 text-gray-900 dark:text-blue-500 dark:text-white" 
-                  : "border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:border-gray-300 dark:hover:border-gray-600"
+                activeNav === "holdings"
+                  ? "border-gray-900 dark:border-white text-gray-900 dark:text-white" 
+                  : "border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
               }`}
             >
               Holdings
+            </button>
+            <button 
+              onClick={() => navigate("/positions")}
+              className={`py-3 border-b-2 font-medium text-sm transition-colors ${
+                activeNav === "positions"
+                  ? "border-gray-900 dark:border-white text-gray-900 dark:text-white" 
+                  : "border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+              }`}
+            >
+              Positions
+            </button>
+            <button 
+              onClick={() => navigate("/orders")}
+              className={`py-3 border-b-2 font-medium text-sm transition-colors ${
+                activeNav === "orders"
+                  ? "border-gray-900 dark:border-white text-gray-900 dark:text-white" 
+                  : "border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+              }`}
+            >
+              Orders
+            </button>
+            <button 
+              onClick={() => navigate("/watchlist")}
+              className={`py-3 border-b-2 font-medium text-sm transition-colors ${
+                activeNav === "watchlist"
+                  ? "border-gray-900 dark:border-white text-gray-900 dark:text-white" 
+                  : "border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+              }`}
+            >
+              Watchlist
             </button>
           </nav>
           
@@ -131,6 +229,31 @@ const Header = () => {
             </button>
             <button className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
               915.trade ↗
+            </button>
+          </div>
+        </div>
+
+        {/* Market Ticker */}
+        <div className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-6 py-2 overflow-x-auto">
+          <div className="flex items-center gap-6 min-w-max">
+            {loadingIndices && (
+              <div className="flex items-center gap-4">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-28" />
+              </div>
+            )}
+            {!loadingIndices && indices.map((index) => (
+              <div key={index.name} className="flex items-center gap-2 whitespace-nowrap">
+                <span className="font-medium text-sm text-gray-900 dark:text-white">{index.name}:</span>
+                <span className="text-sm text-gray-900 dark:text-white">{index.value}</span>
+                <span className={`text-sm font-medium ${index.positive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                  {index.change} {index.percent}
+                </span>
+              </div>
+            ))}
+            <button className="p-1 hover:bg-gray-200 dark:hover:bg-gray-800 rounded transition-colors ml-auto">
+              <Globe className="w-4 h-4 text-gray-600 dark:text-gray-400" />
             </button>
           </div>
         </div>

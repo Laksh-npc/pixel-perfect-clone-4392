@@ -1,16 +1,25 @@
 import { Megaphone, Link2, BarChart3, Hourglass, FileText, CalendarCheck, Filter } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
 
 const ProductsTools = () => {
+  const navigate = useNavigate();
+  
   const products = [
-    { name: "IPO", icon: Megaphone, badge: "3 open", badgeColor: "text-green-600" },
-    { name: "Bonds", icon: Link2, badge: "1 open", badgeColor: "text-green-600" },
-    { name: "ETF Screener", icon: BarChart3 },
+    { name: "IPO", icon: Megaphone, badge: "3 open", badgeColor: "text-green-600", route: "/ipo" },
+    { name: "Bonds", icon: Link2, badge: "1 open", badgeColor: "text-green-600", route: "/bonds" },
+    { name: "ETF Screener", icon: BarChart3, route: "/etf-screener" },
     { name: "Intraday Screener", icon: Hourglass },
     { name: "MTF stocks", icon: FileText },
     { name: "Events calendar", icon: CalendarCheck },
     { name: "All Stocks screener", icon: Filter },
   ];
+
+  const handleProductClick = (product: typeof products[0]) => {
+    if (product.route) {
+      navigate(product.route);
+    }
+  };
 
   return (
     <div className="border rounded-lg p-6 bg-card shadow-sm">
@@ -21,6 +30,7 @@ const ProductsTools = () => {
           return (
             <div 
               key={product.name} 
+              onClick={() => handleProductClick(product)}
               className="flex items-center justify-between py-2.5 px-2 -mx-2 rounded-md hover:bg-muted/50 cursor-pointer transition-colors"
             >
               <div className="flex items-center gap-3">

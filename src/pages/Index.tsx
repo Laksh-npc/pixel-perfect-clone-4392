@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
-import MarketTicker from "@/components/MarketTicker";
 import StockCard from "@/components/StockCard";
 import InvestmentSummary from "@/components/InvestmentSummary";
 import ProductsTools from "@/components/ProductsTools";
@@ -381,7 +380,6 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <MarketTicker />
       
       <main className="container mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -463,9 +461,11 @@ const Index = () => {
                 {etfs.map((etf, index) => (
                   <div key={index} className="border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer bg-card">
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary via-cyan-400 to-blue-500 flex items-center justify-center text-white font-bold">
-                        {etf.logo}
-                      </div>
+                      <img 
+                        src="/groww-logo.svg" 
+                        alt="Groww" 
+                        className="w-12 h-12 flex-shrink-0 rounded-full"
+                      />
                     </div>
                     <div className="text-sm font-medium mb-2">{etf.name}</div>
                     {etf.price ? (

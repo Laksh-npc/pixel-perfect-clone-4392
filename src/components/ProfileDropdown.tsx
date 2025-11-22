@@ -48,19 +48,15 @@ const ProfileDropdown = ({ profileImage = "/profile-icon.png" }: ProfileDropdown
         onClick={() => setIsOpen(!isOpen)}
         className="relative w-9 h-9 rounded-full overflow-hidden hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
       >
-        {profileImage ? (
-          <img
-            src={profileImage}
-            alt="Profile"
-            className="w-full h-full object-cover rounded-full"
-          />
-        ) : (
-          <div className="w-full h-full bg-gray-800 dark:bg-gray-700 flex items-center justify-center rounded-full">
-            <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
-              <div className="w-4 h-4 rounded-full bg-white/40"></div>
-            </div>
-          </div>
-        )}
+        <div className="w-full h-full bg-white rounded-full flex items-center justify-center">
+          <svg width="36" height="36" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+            <circle cx="20" cy="20" r="20" fill="white"/>
+            {/* Left-facing profile silhouette - head */}
+            <path d="M26 12C26 7.03 21.97 3 17 3C12.03 3 8 7.03 8 12C8 16.97 12.03 21 17 21C21.97 21 26 16.97 26 12Z" fill="black"/>
+            {/* Shoulders */}
+            <path d="M17 23C11.48 23 7 27.48 7 33H9C9 28.58 12.58 25 17 25C21.42 25 25 28.58 25 33H27C27 27.48 22.52 23 17 23Z" fill="black"/>
+          </svg>
+        </div>
       </button>
 
       {isOpen && (
