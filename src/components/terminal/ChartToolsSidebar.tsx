@@ -15,8 +15,9 @@ import {
   ZoomOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { memo } from "react";
 
-const ChartToolsSidebar = () => {
+const ChartToolsSidebar = memo(() => {
   const tools = [
     { icon: MousePointer2, label: "Select" },
     { icon: Minus, label: "Horizontal Line" },
@@ -36,7 +37,7 @@ const ChartToolsSidebar = () => {
   ];
 
   return (
-    <div className="w-12 bg-gray-50 border-r border-gray-200 flex flex-col items-center py-2 gap-1">
+    <div className="w-12 bg-muted/30 border-r border-border flex flex-col items-center py-2 gap-1">
       {tools.map((tool, index) => {
         const Icon = tool.icon;
         return (
@@ -44,7 +45,7 @@ const ChartToolsSidebar = () => {
             key={index}
             variant="ghost"
             size="icon"
-            className="h-8 w-8 text-gray-600 hover:bg-gray-200 hover:text-gray-900 rounded-md"
+            className="h-8 w-8 text-muted-foreground hover:bg-muted hover:text-foreground rounded-md"
             title={tool.label}
           >
             <Icon className="w-4 h-4" />
@@ -55,14 +56,15 @@ const ChartToolsSidebar = () => {
       <Button
         variant="ghost"
         size="icon"
-        className="h-8 w-8 text-gray-600 hover:bg-gray-200 hover:text-gray-900 rounded-md mt-auto"
+        className="h-8 w-8 text-muted-foreground hover:bg-muted hover:text-foreground rounded-md mt-auto"
         title="Settings"
       >
         <Settings className="w-4 h-4" />
       </Button>
     </div>
   );
-};
+});
+
+ChartToolsSidebar.displayName = "ChartToolsSidebar";
 
 export default ChartToolsSidebar;
-

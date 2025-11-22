@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, memo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { api } from "@/services/api";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -25,9 +25,7 @@ const Terminal = () => {
       try {
         setLoading(true);
         setError(null);
-        console.log(`Fetching stock details for symbol: ${symbol}`);
         const details = await api.getStockDetails(symbol);
-        console.log("Stock details received:", details);
         setStockDetails(details);
       } catch (err: any) {
         console.error("Error fetching stock data from API:", err);
@@ -44,12 +42,12 @@ const Terminal = () => {
   // Handle missing symbol
   if (!symbol) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">Invalid Stock Symbol</h1>
           <button
             onClick={() => navigate("/")}
-            className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90"
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
           >
             Go Back Home
           </button>
@@ -67,7 +65,7 @@ const Terminal = () => {
   // Show loading state
   if (loading && !stockDetails) {
     return (
-      <div className="min-h-screen bg-white flex flex-col">
+      <div className="min-h-screen bg-background flex flex-col">
         <TerminalHeader symbol={symbol} stockDetails={defaultStockDetails} />
         <div className="flex-1 flex overflow-hidden">
           <ChartToolsSidebar />
@@ -87,7 +85,7 @@ const Terminal = () => {
   // Show error if stock details failed to load
   if (error || (!loading && !stockDetails)) {
     return (
-      <div className="min-h-screen bg-white flex flex-col">
+      <div className="min-h-screen bg-background flex flex-col">
         <TerminalHeader symbol={symbol} stockDetails={defaultStockDetails} />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
@@ -95,17 +93,17 @@ const Terminal = () => {
             <p className="text-muted-foreground mb-6">
               {error || "Unable to fetch stock details from API"}
             </p>
-            <p className="text-sm text-gray-500 mb-4">Symbol: {symbol}</p>
+            <p className="text-sm text-muted-foreground mb-4">Symbol: {symbol}</p>
             <div className="flex gap-4 justify-center">
               <button
                 onClick={() => window.location.reload()}
-                className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90"
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
               >
                 Retry
               </button>
               <button
                 onClick={() => navigate("/")}
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+                className="px-4 py-2 bg-muted text-muted-foreground rounded-md hover:bg-muted/80"
               >
                 Go Back Home
               </button>
@@ -117,7 +115,7 @@ const Terminal = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       <TerminalHeader symbol={symbol} stockDetails={stockDetails} />
       <div className="flex-1 flex overflow-hidden">
         <ChartToolsSidebar />
@@ -131,5 +129,4 @@ const Terminal = () => {
   );
 };
 
-export default Terminal;
-
+export default memo(Terminal);

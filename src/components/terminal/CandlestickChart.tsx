@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef, memo } from "react";
 import { api } from "@/services/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -13,10 +13,10 @@ import {
   Bar,
   ReferenceLine,
   Cell,
-  Rectangle,
 } from "recharts";
 import { format } from "date-fns";
-import { BarChart3, Undo2, Redo2, Calendar } from "lucide-react";
+import { BarChart3, Undo2, Redo2, Calendar, TrendingUp, TrendingDown } from "lucide-react";
+import { useTheme } from "@/contexts/ThemeContext";
 
 interface CandlestickChartProps {
   symbol: string;
@@ -24,42 +24,98 @@ interface CandlestickChartProps {
 }
 
 const timeframes = [
-  { label: "1D", value: "1d" },
-  { label: "1M", value: "1m" },
-  { label: "1Y", value: "1y" },
-  { label: "3Y", value: "3y" },
   { label: "5Y", value: "5y" },
+  { label: "1Y", value: "1y" },
+  { label: "3M", value: "3m" },
+  { label: "1M", value: "1m" },
+  { label: "5D", value: "5d" },
+  { label: "1D", value: "1d" },
 ];
 
-// Custom Candlestick Shape Component - Improved version
-const CandlestickShape = (props: any) => {
-  const { x, y, width, payload } = props;
-  if (!payload || payload.high === undefined || payload.low === undefined || payload.open === undefined || payload.close === undefined) {
+// Memoized custom tooltip to prevent re-renders
+// Updates parent OHLC display via callbacks
+const CustomTooltip = memo(({ active, payload, onShow, onHide }: any) => {
+  // Update parent when tooltip shows/hides
+  if (active && payload && payload.length && payload[0]?.payload) {
+    onShow?.(payload[0].payload);
+  } else if (!active) {
+    onHide?.();
+  }
+
+  if (!active || !payload || !payload.length) {
     return null;
   }
 
+  const data = payload[0].payload;
+  if (!data) {
+    return null;
+  }
+
+  const dateValue = typeof data.date === 'number' ? new Date(data.date) : new Date(data.date);
+  const timeframe = data.timeframe || "1d";
+
+  return (
+    <div className="bg-background border border-border rounded-lg shadow-lg p-3 z-50 pointer-events-none">
+      <p className="text-xs text-muted-foreground mb-2 font-semibold">
+        {format(dateValue, timeframe === "1d" || timeframe === "5d" ? "MMM dd, HH:mm" : "MMM dd, yyyy")}
+      </p>
+      <div className="space-y-1">
+        <div className="flex justify-between gap-4">
+          <span className="text-xs text-muted-foreground">O:</span>
+          <span className="text-xs font-semibold">₹{data.open?.toFixed(2) || "0.00"}</span>
+        </div>
+        <div className="flex justify-between gap-4">
+          <span className="text-xs text-muted-foreground">H:</span>
+          <span className="text-xs font-semibold text-green-500 dark:text-green-400">₹{data.high?.toFixed(2) || "0.00"}</span>
+        </div>
+        <div className="flex justify-between gap-4">
+          <span className="text-xs text-muted-foreground">L:</span>
+          <span className="text-xs font-semibold text-red-500 dark:text-red-400">₹{data.low?.toFixed(2) || "0.00"}</span>
+        </div>
+        <div className="flex justify-between gap-4">
+          <span className="text-xs text-muted-foreground">C:</span>
+          <span className="text-xs font-semibold">₹{data.close?.toFixed(2) || "0.00"}</span>
+        </div>
+        {data.volume !== undefined && (
+          <div className="flex justify-between gap-4 pt-1 border-t border-border mt-1">
+            <span className="text-xs text-muted-foreground">Volume:</span>
+            <span className="text-xs font-semibold">
+              {data.volume >= 1000000
+                ? `${(data.volume / 1000000).toFixed(2)}M`
+                : data.volume >= 1000
+                ? `${(data.volume / 1000).toFixed(2)}K`
+                : data.volume.toFixed(0)}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+});
+
+CustomTooltip.displayName = "CustomTooltip";
+
+// Memoized candlestick shape component - Fixed to work with Recharts properly
+const CandlestickShape = memo((props: any) => {
+  const { x, y, width, payload } = props;
+  
+  if (!payload || payload.high === undefined || payload.low === undefined) return null;
+
   const isUp = payload.close >= payload.open;
-  const color = isUp ? "#10b981" : "#ef4444";
+  // Groww colors: green #4caf50, red #ef5350 (matching screenshots)
+  const color = isUp 
+    ? "#4caf50" // Groww green
+    : "#ef5350"; // Groww red
   
-  // Get the Y scale from the chart context
-  // The y value passed is for the high price (since we're using high as dataKey)
-  // We need to calculate positions for low, open, and close relative to the chart domain
-  
-  // For proper candlestick rendering, we need to use the actual Y scale
-  // Since Recharts doesn't expose the scale directly, we'll use a different approach:
-  // Render separate elements for wick and body using calculated positions
-  
-  // The y position represents where the HIGH price is on the chart
-  // We need to calculate where LOW, OPEN, and CLOSE should be
-  // This requires knowing the price range and chart height
-  
-  // Get price range from payload context (we'll pass it)
+  const centerX = x + width / 2;
+  const candleWidth = Math.max(width * 0.6, 2);
+  const candleX = x + (width - candleWidth) / 2;
+
+  // Calculate relative positions based on price range
+  // The y position is for the high price
   const priceRange = payload.high - payload.low;
   if (priceRange === 0) {
     // Single price point
-    const candleWidth = Math.max(width * 0.6, 3);
-    const candleX = x + (width - candleWidth) / 2;
-    const centerX = x + width / 2;
     return (
       <g>
         <line x1={centerX} y1={y} x2={centerX} y2={y} stroke={color} strokeWidth={2} />
@@ -67,95 +123,76 @@ const CandlestickShape = (props: any) => {
       </g>
     );
   }
-  
-  // Calculate relative positions
-  // We'll use the chart's Y scale by accessing it through the payload's context
-  // For now, we'll estimate based on typical chart dimensions
-  // The actual implementation should use the Y scale from Recharts
-  
-  // Better approach: Use multiple Bar components or calculate using the actual scale
-  // For this implementation, we'll render using the high Y position and calculate others
-  
-  const candleWidth = Math.max(width * 0.6, 3);
-  const candleX = x + (width - candleWidth) / 2;
-  const centerX = x + width / 2;
-  
-  // Calculate body positions
-  // Since we only have the high Y position, we need to estimate
-  // In a proper implementation, we'd use the Y scale to convert prices to pixels
-  const bodyTopY = y; // This will be adjusted by the actual scale
-  const bodyBottomY = y; // This will be adjusted by the actual scale
-  
-  // For now, render a simplified version
-  // The actual positions will be calculated by Recharts when we use proper dataKesys
-  return (
-    <g>
-      {/* High-Low wick - will be rendered separately */}
-      {/* Candle body - will be rendered separately */}
-    </g>
-  );
-};
 
-// Better approach: Use separate components for wick and body
-const CandlestickWick = (props: any) => {
-  const { x, y, width, payload, yScale } = props;
-  if (!payload || !yScale) return null;
+  // Calculate pixel positions based on price differences from high
+  // We need to estimate chart height - use a reasonable default (400px available height)
+  const chartHeight = 400;
+  const marginTop = 10;
+  const marginBottom = 80;
+  const availableHeight = chartHeight - marginTop - marginBottom;
   
-  const isUp = payload.close >= payload.open;
-  const color = isUp ? "#10b981" : "#ef4444";
-  const centerX = x + width / 2;
+  // Get domain from parent if available, otherwise estimate
+  const domainMin = payload.domainMin || (payload.high - priceRange * 1.1);
+  const domainMax = payload.domainMax || (payload.high + priceRange * 0.1);
+  const domainRange = domainMax - domainMin;
   
-  // Use the Y scale to get actual pixel positions
-  const highY = yScale(payload.high);
-  const lowY = yScale(payload.low);
+  if (domainRange === 0) return null;
   
-  return (
-    <line
-      x1={centerX}
-      y1={highY}
-      x2={centerX}
-      y2={lowY}
-      stroke={color}
-      strokeWidth={1.5}
-    />
-  );
-};
-
-const CandlestickBody = (props: any) => {
-  const { x, y, width, payload, yScale } = props;
-  if (!payload || !yScale) return null;
+  // Price to pixel ratio
+  const priceToPixel = availableHeight / domainRange;
   
-  const isUp = payload.close >= payload.open;
-  const color = isUp ? "#10b981" : "#ef4444";
+  // Calculate positions relative to high (which is at y)
+  const highY = y;
+  const lowDiff = payload.high - payload.low;
+  const lowY = y + (lowDiff * priceToPixel);
+  const openDiff = payload.high - payload.open;
+  const closeDiff = payload.high - payload.close;
+  const openY = y + (openDiff * priceToPixel);
+  const closeY = y + (closeDiff * priceToPixel);
   
-  const openY = yScale(payload.open);
-  const closeY = yScale(payload.close);
   const bodyTop = Math.min(openY, closeY);
   const bodyBottom = Math.max(openY, closeY);
   const bodyHeight = Math.max(bodyBottom - bodyTop, 1);
-  
-  const candleWidth = Math.max(width * 0.6, 3);
-  const candleX = x + (width - candleWidth) / 2;
-  
+
   return (
-    <rect
-      x={candleX}
-      y={bodyTop}
-      width={candleWidth}
-      height={bodyHeight}
-      fill={color}
-      stroke={color}
-      strokeWidth={0.5}
-    />
+    <g>
+      {/* High-Low wick */}
+      <line
+        x1={centerX}
+        y1={highY}
+        x2={centerX}
+        y2={lowY}
+        stroke={color}
+        strokeWidth={1.5}
+      />
+      {/* Candle body */}
+      <rect
+        x={candleX}
+        y={bodyTop}
+        width={candleWidth}
+        height={bodyHeight}
+        fill={color}
+        stroke={color}
+        strokeWidth={0.5}
+      />
+    </g>
   );
-};
+});
+
+CandlestickShape.displayName = "CandlestickShape";
 
 const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartProps) => {
+  const { theme } = useTheme();
   const [selectedPeriod, setSelectedPeriod] = useState("1d");
   const [chartData, setChartData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [hoveredData, setHoveredData] = useState<any>(null);
+  
+  // Use refs to track hovered data without causing re-renders
+  const hoveredDataRef = useRef<any>(null);
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  // Separate state for OHLC display to avoid chart re-renders
+  const [displayOHLC, setDisplayOHLC] = useState<any>(null);
 
   const priceInfo = stockDetails?.priceInfo || {};
   const info = stockDetails?.info || {};
@@ -168,151 +205,112 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
   const close = priceInfo.lastPrice || priceInfo.close || 0;
   const isPositive = change >= 0;
 
-  useEffect(() => {
-    const fetchChartData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+  // Memoize data fetching to prevent multiple calls
+  const fetchChartData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-        const endDate = new Date();
-        const startDate = new Date();
-        let formatted: any[] = [];
+      const endDate = new Date();
+      const startDate = new Date();
+      let formatted: any[] = [];
 
-        switch (selectedPeriod) {
-          case "1d":
-            try {
-              const intradayData = await api.getStockIntradayData(symbol);
-              const graphDataArray = intradayData?.graphData || intradayData?.grapthData;
+      switch (selectedPeriod) {
+        case "1d":
+        case "5d":
+          try {
+            const intradayData = await api.getStockIntradayData(symbol);
+            const graphDataArray = intradayData?.graphData || intradayData?.grapthData;
+            
+            if (graphDataArray && Array.isArray(graphDataArray) && graphDataArray.length > 0) {
+              // Group into 5-minute intervals for candlesticks
+              const grouped: { [key: number]: any } = {};
               
-              if (graphDataArray && Array.isArray(graphDataArray) && graphDataArray.length > 0) {
-                // Group into 5-minute intervals for candlesticks
-                const grouped: { [key: number]: any } = {};
+              graphDataArray.forEach((dataPoint: any) => {
+                let timestamp: number;
+                let price: number;
+                let volume: number = 0;
                 
-                graphDataArray.forEach((dataPoint: any) => {
-                  let timestamp: number;
-                  let price: number;
-                  let volume: number = 0;
-                  
-                  if (Array.isArray(dataPoint)) {
-                    [timestamp, price] = dataPoint;
-                  } else if (dataPoint.timestamp && dataPoint.price) {
-                    timestamp = dataPoint.timestamp;
-                    price = dataPoint.price;
-                    volume = dataPoint.volume || 0;
-                  } else {
-                    return;
-                  }
-                  
-                  if (!timestamp || !price || price <= 0) return;
-                  
-                  const date = new Date(timestamp);
-                  const minutes = date.getMinutes();
-                  const roundedMinutes = Math.floor(minutes / 5) * 5;
-                  const groupKey = new Date(date);
-                  groupKey.setMinutes(roundedMinutes, 0, 0);
-                  const key = groupKey.getTime();
-
-                  if (!grouped[key]) {
-                    grouped[key] = {
-                      date: key,
-                      open: price,
-                      high: price,
-                      low: price,
-                      close: price,
-                      volume: volume,
-                    };
-                  } else {
-                    grouped[key].high = Math.max(grouped[key].high, price);
-                    grouped[key].low = Math.min(grouped[key].low, price);
-                    grouped[key].close = price;
-                    grouped[key].volume += volume;
-                  }
-                });
-
-                formatted = Object.values(grouped)
-                  .sort((a: any, b: any) => a.date - b.date);
-
-                if (formatted.length > 0) {
-                  setChartData(formatted);
-                  setLoading(false);
+                if (Array.isArray(dataPoint)) {
+                  [timestamp, price] = dataPoint;
+                } else if (dataPoint.timestamp && dataPoint.price) {
+                  timestamp = dataPoint.timestamp;
+                  price = dataPoint.price;
+                  volume = dataPoint.volume || 0;
+                } else {
                   return;
                 }
+                
+                if (!timestamp || !price || price <= 0) return;
+                
+                const date = new Date(timestamp);
+                const minutes = date.getMinutes();
+                const roundedMinutes = Math.floor(minutes / 5) * 5;
+                const groupKey = new Date(date);
+                groupKey.setMinutes(roundedMinutes, 0, 0);
+                const key = groupKey.getTime();
+
+                if (!grouped[key]) {
+                  grouped[key] = {
+                    date: key,
+                    open: price,
+                    high: price,
+                    low: price,
+                    close: price,
+                    volume: volume,
+                    timeframe: selectedPeriod,
+                  };
+                } else {
+                  grouped[key].high = Math.max(grouped[key].high, price);
+                  grouped[key].low = Math.min(grouped[key].low, price);
+                  grouped[key].close = price;
+                  grouped[key].volume += volume;
+                }
+              });
+
+              formatted = Object.values(grouped)
+                .sort((a: any, b: any) => a.date - b.date);
+
+              if (formatted.length > 0) {
+                setChartData(formatted);
+                setLoading(false);
+                return;
               }
-            } catch (intradayError: any) {
-              console.warn("Intraday data not available:", intradayError?.message);
             }
+          } catch (intradayError: any) {
+            console.warn("Intraday data not available:", intradayError?.message);
+          }
+          if (selectedPeriod === "5d") {
+            startDate.setDate(startDate.getDate() - 5);
+          } else {
             startDate.setDate(startDate.getDate() - 1);
-            break;
-          case "1m":
-            startDate.setMonth(startDate.getMonth() - 1);
-            break;
-          case "1y":
-            startDate.setFullYear(startDate.getFullYear() - 1);
-            break;
-          case "3y":
-            startDate.setFullYear(startDate.getFullYear() - 3);
-            break;
-          case "5y":
-            startDate.setFullYear(startDate.getFullYear() - 5);
-            break;
-        }
+          }
+          break;
+        case "1m":
+          startDate.setMonth(startDate.getMonth() - 1);
+          break;
+        case "3m":
+          startDate.setMonth(startDate.getMonth() - 3);
+          break;
+        case "1y":
+          startDate.setFullYear(startDate.getFullYear() - 1);
+          break;
+        case "5y":
+          startDate.setFullYear(startDate.getFullYear() - 5);
+          break;
+      }
 
-        // Fetch historical data
-        const dateStart = format(startDate, "yyyy-MM-dd");
-        const dateEnd = format(endDate, "yyyy-MM-dd");
+      // Fetch historical data
+      const dateStart = format(startDate, "yyyy-MM-dd");
+      const dateEnd = format(endDate, "yyyy-MM-dd");
 
-        try {
-          const historicalData = await api.getStockHistoricalData(symbol, dateStart, dateEnd);
+      try {
+        const historicalData = await api.getStockHistoricalData(symbol, dateStart, dateEnd);
 
-          if (Array.isArray(historicalData)) {
-            historicalData.forEach((period: any) => {
-              if (period?.data && Array.isArray(period.data)) {
-                period.data.forEach((item: any) => {
-                  const timestamp = item.CH_TIMESTAMP || item.TIMESTAMP || item.date || item.timestamp;
-                  const open = item.CH_OPENING_PRICE || item.OPEN || item.open || item.o;
-                  const high = item.CH_TRADE_HIGH_PRICE || item.HIGH || item.high || item.h;
-                  const low = item.CH_TRADE_LOW_PRICE || item.LOW || item.low || item.l;
-                  const close = item.CH_LAST_TRADED_PRICE || item.CH_CLOSING_PRICE || item.CLOSE || item.close || item.c;
-                  const volume = item.CH_TOT_TRADED_QTY || item.VOLUME || item.volume || item.v || 0;
-
-                  if (timestamp && (open !== undefined && open !== null || high !== undefined && high !== null || low !== undefined && low !== null || close !== undefined && close !== null)) {
-                    const ts = timestamp instanceof Date ? timestamp.getTime() : new Date(timestamp).getTime();
-                    formatted.push({
-                      date: ts,
-                      open: open !== undefined && open !== null ? open : (close || high || low || 0),
-                      high: high !== undefined && high !== null ? high : (close || open || low || 0),
-                      low: low !== undefined && low !== null ? low : (close || open || high || 0),
-                      close: close !== undefined && close !== null ? close : (open || high || low || 0),
-                      volume: volume,
-                    });
-                  }
-                });
-              } else if (Array.isArray(period)) {
-                period.forEach((item: any) => {
-                  const timestamp = item.CH_TIMESTAMP || item.TIMESTAMP || item.date || item.timestamp;
-                  const open = item.CH_OPENING_PRICE || item.OPEN || item.open || item.o;
-                  const high = item.CH_TRADE_HIGH_PRICE || item.HIGH || item.high || item.h;
-                  const low = item.CH_TRADE_LOW_PRICE || item.LOW || item.low || item.l;
-                  const close = item.CH_LAST_TRADED_PRICE || item.CH_CLOSING_PRICE || item.CLOSE || item.close || item.c;
-                  const volume = item.CH_TOT_TRADED_QTY || item.VOLUME || item.volume || item.v || 0;
-
-                  if (timestamp && (open !== undefined && open !== null || high !== undefined && high !== null || low !== undefined && low !== null || close !== undefined && close !== null)) {
-                    const ts = timestamp instanceof Date ? timestamp.getTime() : new Date(timestamp).getTime();
-                    formatted.push({
-                      date: ts,
-                      open: open !== undefined && open !== null ? open : (close || high || low || 0),
-                      high: high !== undefined && high !== null ? high : (close || open || low || 0),
-                      low: low !== undefined && low !== null ? low : (close || open || high || 0),
-                      close: close !== undefined && close !== null ? close : (open || high || low || 0),
-                      volume: volume,
-                    });
-                  }
-                });
-              }
-            });
-          } else if (historicalData && typeof historicalData === 'object' && !Array.isArray(historicalData)) {
-            if (historicalData.data && Array.isArray(historicalData.data)) {
-              historicalData.data.forEach((item: any) => {
+        if (Array.isArray(historicalData)) {
+          historicalData.forEach((period: any) => {
+            if (period?.data && Array.isArray(period.data)) {
+              period.data.forEach((item: any) => {
                 const timestamp = item.CH_TIMESTAMP || item.TIMESTAMP || item.date || item.timestamp;
                 const open = item.CH_OPENING_PRICE || item.OPEN || item.open || item.o;
                 const high = item.CH_TRADE_HIGH_PRICE || item.HIGH || item.high || item.h;
@@ -329,69 +327,120 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
                     low: low !== undefined && low !== null ? low : (close || open || high || 0),
                     close: close !== undefined && close !== null ? close : (open || high || low || 0),
                     volume: volume,
+                    timeframe: selectedPeriod,
+                  });
+                }
+              });
+            } else if (Array.isArray(period)) {
+              period.forEach((item: any) => {
+                const timestamp = item.CH_TIMESTAMP || item.TIMESTAMP || item.date || item.timestamp;
+                const open = item.CH_OPENING_PRICE || item.OPEN || item.open || item.o;
+                const high = item.CH_TRADE_HIGH_PRICE || item.HIGH || item.high || item.h;
+                const low = item.CH_TRADE_LOW_PRICE || item.LOW || item.low || item.l;
+                const close = item.CH_LAST_TRADED_PRICE || item.CH_CLOSING_PRICE || item.CLOSE || item.close || item.c;
+                const volume = item.CH_TOT_TRADED_QTY || item.VOLUME || item.volume || item.v || 0;
+
+                if (timestamp && (open !== undefined && open !== null || high !== undefined && high !== null || low !== undefined && low !== null || close !== undefined && close !== null)) {
+                  const ts = timestamp instanceof Date ? timestamp.getTime() : new Date(timestamp).getTime();
+                  formatted.push({
+                    date: ts,
+                    open: open !== undefined && open !== null ? open : (close || high || low || 0),
+                    high: high !== undefined && high !== null ? high : (close || open || low || 0),
+                    low: low !== undefined && low !== null ? low : (close || open || high || 0),
+                    close: close !== undefined && close !== null ? close : (open || high || low || 0),
+                    volume: volume,
+                    timeframe: selectedPeriod,
                   });
                 }
               });
             }
-          }
+          });
+        } else if (historicalData && typeof historicalData === 'object' && !Array.isArray(historicalData)) {
+          if (historicalData.data && Array.isArray(historicalData.data)) {
+            historicalData.data.forEach((item: any) => {
+              const timestamp = item.CH_TIMESTAMP || item.TIMESTAMP || item.date || item.timestamp;
+              const open = item.CH_OPENING_PRICE || item.OPEN || item.open || item.o;
+              const high = item.CH_TRADE_HIGH_PRICE || item.HIGH || item.high || item.h;
+              const low = item.CH_TRADE_LOW_PRICE || item.LOW || item.low || item.l;
+              const close = item.CH_LAST_TRADED_PRICE || item.CH_CLOSING_PRICE || item.CLOSE || item.close || item.c;
+              const volume = item.CH_TOT_TRADED_QTY || item.VOLUME || item.volume || item.v || 0;
 
-          formatted.sort((a, b) => a.date - b.date);
-          // For longer timeframes, limit data points for performance
-          const maxPoints = selectedPeriod === "5y" ? 1500 : selectedPeriod === "3y" ? 1200 : selectedPeriod === "1y" ? 800 : 500;
-          const limitedData = formatted.length > maxPoints
-            ? formatted.filter((_, i) => i % Math.ceil(formatted.length / maxPoints) === 0)
-            : formatted;
-
-          if (limitedData.length > 0) {
-            setChartData(limitedData);
-            setError(null);
-          } else {
-            throw new Error("No chart data available");
-          }
-        } catch (historicalError: any) {
-          console.error("Error fetching historical data:", historicalError);
-          if ((open > 0 || high > 0 || low > 0 || close > 0) && formatted.length === 0) {
-            const now = new Date();
-            formatted = [{
-              date: now.getTime(),
-              open: open || close || high || low,
-              high: high || close || open || low,
-              low: low || close || open || high,
-              close: close || open || high || low,
-              volume: 0,
-            }];
-            setChartData(formatted);
-            setError("Limited data: Showing current price only.");
-          } else {
-            throw historicalError;
+              if (timestamp && (open !== undefined && open !== null || high !== undefined && high !== null || low !== undefined && low !== null || close !== undefined && close !== null)) {
+                const ts = timestamp instanceof Date ? timestamp.getTime() : new Date(timestamp).getTime();
+                formatted.push({
+                  date: ts,
+                  open: open !== undefined && open !== null ? open : (close || high || low || 0),
+                  high: high !== undefined && high !== null ? high : (close || open || low || 0),
+                  low: low !== undefined && low !== null ? low : (close || open || high || 0),
+                  close: close !== undefined && close !== null ? close : (open || high || low || 0),
+                  volume: volume,
+                  timeframe: selectedPeriod,
+                });
+              }
+            });
           }
         }
-      } catch (err: any) {
-        console.error("Error fetching chart data:", err);
-        const errorMessage = err?.message || "Failed to load chart data";
-        
-        if (open > 0 || high > 0 || low > 0 || close > 0) {
+
+        formatted.sort((a, b) => a.date - b.date);
+        // For longer timeframes, limit data points for performance
+        const maxPoints = selectedPeriod === "5y" ? 1500 : selectedPeriod === "3y" ? 1200 : selectedPeriod === "1y" ? 800 : 500;
+        const limitedData = formatted.length > maxPoints
+          ? formatted.filter((_, i) => i % Math.ceil(formatted.length / maxPoints) === 0)
+          : formatted;
+
+        if (limitedData.length > 0) {
+          setChartData(limitedData);
+          setError(null);
+        } else {
+          throw new Error("No chart data available");
+        }
+      } catch (historicalError: any) {
+        console.error("Error fetching historical data:", historicalError);
+        if ((open > 0 || high > 0 || low > 0 || close > 0) && formatted.length === 0) {
           const now = new Date();
-          setChartData([{
+          formatted = [{
             date: now.getTime(),
             open: open || close || high || low,
             high: high || close || open || low,
             low: low || close || open || high,
             close: close || open || high || low,
             volume: 0,
-          }]);
+            timeframe: selectedPeriod,
+          }];
+          setChartData(formatted);
           setError("Limited data: Showing current price only.");
         } else {
-          setError(errorMessage);
-          setChartData([]);
+          throw historicalError;
         }
-      } finally {
-        setLoading(false);
       }
-    };
-
-    fetchChartData();
+    } catch (err: any) {
+      console.error("Error fetching chart data:", err);
+      const errorMessage = err?.message || "Failed to load chart data";
+      
+      if (open > 0 || high > 0 || low > 0 || close > 0) {
+        const now = new Date();
+        setChartData([{
+          date: now.getTime(),
+          open: open || close || high || low,
+          high: high || close || open || low,
+          low: low || close || open || high,
+          close: close || open || high || low,
+          volume: 0,
+          timeframe: selectedPeriod,
+        }]);
+        setError("Limited data: Showing current price only.");
+      } else {
+        setError(errorMessage);
+        setChartData([]);
+      }
+    } finally {
+      setLoading(false);
+    }
   }, [symbol, selectedPeriod, open, high, low, close]);
+
+  useEffect(() => {
+    fetchChartData();
+  }, [fetchChartData]);
 
   const priceRange = useMemo(() => {
     if (chartData.length === 0) {
@@ -419,55 +468,7 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
     return Math.max(...chartData.map(item => item.volume || 0), 1);
   }, [chartData]);
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      setHoveredData(data);
-      const dateValue = typeof label === 'number' ? new Date(label) : new Date(label);
-      return (
-        <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3 z-50 pointer-events-none">
-          <p className="text-xs text-gray-600 mb-2 font-semibold">
-            {format(dateValue, selectedPeriod === "1d" ? "MMM dd, HH:mm" : "MMM dd, yyyy")}
-          </p>
-          <div className="space-y-1">
-            <div className="flex justify-between gap-4">
-              <span className="text-xs text-gray-600">O:</span>
-              <span className="text-xs font-semibold">₹{data.open?.toFixed(2) || "0.00"}</span>
-            </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-xs text-gray-600">H:</span>
-              <span className="text-xs font-semibold text-green-600">₹{data.high?.toFixed(2) || "0.00"}</span>
-            </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-xs text-gray-600">L:</span>
-              <span className="text-xs font-semibold text-red-600">₹{data.low?.toFixed(2) || "0.00"}</span>
-            </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-xs text-gray-600">C:</span>
-              <span className="text-xs font-semibold">₹{data.close?.toFixed(2) || "0.00"}</span>
-            </div>
-            {data.volume !== undefined && (
-              <div className="flex justify-between gap-4 pt-1 border-t mt-1">
-                <span className="text-xs text-gray-600">Volume:</span>
-                <span className="text-xs font-semibold">
-                  {data.volume >= 1000000
-                    ? `${(data.volume / 1000000).toFixed(2)}M`
-                    : data.volume >= 1000
-                    ? `${(data.volume / 1000).toFixed(2)}K`
-                    : data.volume.toFixed(0)}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-      );
-    }
-    setHoveredData(null);
-    return null;
-  };
-
-
-  // Calculate yAxisDomain before early returns to avoid hooks issues
+  // Calculate yAxisDomain
   const yAxisDomain = useMemo(() => {
     if (chartData.length === 0) {
       return [0, 100] as [number, number];
@@ -487,76 +488,33 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
     }));
   }, [chartData]);
 
-  // Custom candlestick rendering - memoized to avoid recreation on every render
-  const CandlestickBar = useMemo(() => {
-    return (props: any) => {
-      const { x, y, width, payload } = props;
-      if (!payload || payload.high === undefined) return null;
-      
-      const isUp = payload.close >= payload.open;
-      const color = isUp ? "#10b981" : "#ef4444";
-      const centerX = x + width / 2;
-      const candleWidth = Math.max(width * 0.6, 3);
-      const candleX = x + (width - candleWidth) / 2;
-      
-      // Get the domain range
-      const domainMin = yAxisDomain[0];
-      const domainMax = yAxisDomain[1];
-      const domainRange = domainMax - domainMin;
-      
-      if (domainRange === 0) return null;
-      
-      // Calculate price differences
-      const priceDiff = payload.high - payload.low;
-      const openDiff = payload.high - payload.open;
-      const closeDiff = payload.high - payload.close;
-      
-      // Estimate chart height from typical chart dimensions
-      const estimatedChartHeight = 500;
-      const marginTop = 10;
-      const marginBottom = 80;
-      const availableHeight = estimatedChartHeight - marginTop - marginBottom;
-      const priceToPixelRatio = availableHeight / domainRange;
-      
-      // Calculate Y positions relative to high
-      const lowY = y + (priceDiff * priceToPixelRatio);
-      const openY = y + (openDiff * priceToPixelRatio);
-      const closeY = y + (closeDiff * priceToPixelRatio);
-      
-      const bodyTop = Math.min(openY, closeY);
-      const bodyBottom = Math.max(openY, closeY);
-      const bodyHeight = Math.max(bodyBottom - bodyTop, 1);
-      
-      return (
-        <g>
-          {/* High-Low wick */}
-          <line
-            x1={centerX}
-            y1={y}
-            x2={centerX}
-            y2={lowY}
-            stroke={color}
-            strokeWidth={1.5}
-          />
-          {/* Candle body */}
-          <rect
-            x={candleX}
-            y={bodyTop}
-            width={candleWidth}
-            height={bodyHeight}
-            fill={color}
-            stroke={color}
-            strokeWidth={0.5}
-          />
-        </g>
-      );
-    };
-  }, [yAxisDomain]);
+  // Memoized timeframe change handler
+  const handleTimeframeChange = useCallback((timeframe: string) => {
+    setSelectedPeriod(timeframe);
+  }, []);
+
+  // Update OHLC display on hover (without triggering chart re-render)
+  // MUST be defined before any early returns (Rules of Hooks)
+  const handleTooltipShow = useCallback((payload: any) => {
+    if (payload) {
+      hoveredDataRef.current = payload;
+      setDisplayOHLC(payload);
+    }
+  }, []);
+  
+  const handleTooltipHide = useCallback(() => {
+    setDisplayOHLC(null);
+    hoveredDataRef.current = null;
+  }, []);
+
+  // Grid color based on theme
+  const gridColor = theme === "dark" ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.06)";
+  const textColor = theme === "dark" ? "rgba(255, 255, 255, 0.7)" : "rgba(0, 0, 0, 0.6)";
 
   if (loading) {
     return (
-      <div className="flex-1 flex flex-col">
-        <div className="p-4 border-b border-gray-200">
+      <div className="flex-1 flex flex-col bg-background">
+        <div className="px-4 py-2 border-b border-border bg-muted/30">
           <Skeleton className="h-8 w-64 mb-2" />
           <Skeleton className="h-6 w-96" />
         </div>
@@ -569,15 +527,16 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
 
   if (error && chartData.length === 0 && !loading) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-white">
+      <div className="flex-1 flex items-center justify-center bg-background">
         <div className="text-center max-w-2xl px-4">
-          <p className="text-xl font-semibold text-gray-900 mb-2">Chart data not available</p>
-          <p className="text-sm text-red-600 mb-4">{error}</p>
+          <p className="text-xl font-semibold text-foreground mb-2">Chart data not available</p>
+          <p className="text-sm text-destructive mb-4">{error}</p>
           <Button
             onClick={() => {
               setError(null);
               setLoading(true);
               setChartData([]);
+              fetchChartData();
             }}
             className="mt-2"
             variant="outline"
@@ -599,88 +558,100 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
     );
   }
 
+  // Get current OHLC from display state or latest data point
+  const displayData = displayOHLC || chartDataFormatted[chartDataFormatted.length - 1] || {
+    open, high, low, close, volume: 0
+  };
+
   return (
-    <div className="flex-1 flex flex-col bg-white overflow-hidden">
-      {/* Stock Info Header */}
-      <div className="px-4 py-2 border-b border-gray-200 bg-gray-50">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div>
-              <h2 className="text-lg font-bold text-gray-900">{info.companyName || symbol}</h2>
-              <div className="flex items-center gap-3 text-sm text-gray-600 mt-1">
-                <span className="font-medium">5m</span>
-                <span>·</span>
-                <span>{info.symbol || symbol}</span>
-                <span>·</span>
-                <span>NSE</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" className="h-7 text-xs">
-                <BarChart3 className="w-3 h-3 mr-1" />
-                fx Indicators
-              </Button>
+    <div className="flex-1 flex flex-col bg-background overflow-hidden" ref={chartContainerRef}>
+      {/* Stock Info Header - Matching Groww layout */}
+      <div className="px-4 py-2 border-b border-border bg-muted/30 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div>
+            <h2 className="text-base font-bold text-foreground">{info.companyName || symbol}</h2>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+              <span className="font-medium">5m</span>
+              <span>·</span>
+              <span>{info.symbol || symbol}</span>
+              <span>·</span>
+              <span>NSE</span>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="h-7 w-7">
-              <Undo2 className="w-3 h-3" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7">
-              <Redo2 className="w-3 h-3" />
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">
+              <BarChart3 className="w-3 h-3 mr-1" />
+              Indicators
             </Button>
           </div>
         </div>
-        <div className="flex items-center gap-4 mt-2 text-sm">
-          <div className="flex items-center gap-4">
-            <span className="text-gray-600">O:{open.toFixed(2)}</span>
-            <span className="text-green-600 font-medium">H:{high.toFixed(2)}</span>
-            <span className="text-red-600 font-medium">L:{low.toFixed(2)}</span>
-            <span className="text-gray-900 font-medium">C:{close.toFixed(2)}</span>
-            <span className={isPositive ? "text-green-600" : "text-red-600"}>
-              {isPositive ? "+" : ""}
-              {change.toFixed(2)} ({isPositive ? "+" : ""}
-              {percentChange.toFixed(2)}%)
-            </span>
-          </div>
-          <div className="text-gray-600">
-            Volume SMA 9{" "}
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" className="h-7 w-7">
+            <Undo2 className="w-3 h-3" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7">
+            <Redo2 className="w-3 h-3" />
+          </Button>
+        </div>
+      </div>
+
+      {/* OHLC Display - Always visible, matching Groww */}
+      <div className="px-4 py-1.5 border-b border-border bg-muted/20 flex items-center gap-4 text-xs">
+        <div className="flex items-center gap-3">
+          <span className="text-muted-foreground">O<span className="ml-1 font-medium text-foreground">{displayData.open?.toFixed(2) || open.toFixed(2)}</span></span>
+          <span className="text-green-500 dark:text-green-400 font-medium">H<span className="ml-1 font-semibold">{displayData.high?.toFixed(2) || high.toFixed(2)}</span></span>
+          <span className="text-red-500 dark:text-red-400 font-medium">L<span className="ml-1 font-semibold">{displayData.low?.toFixed(2) || low.toFixed(2)}</span></span>
+          <span className="text-muted-foreground">C<span className="ml-1 font-medium text-foreground">{displayData.close?.toFixed(2) || close.toFixed(2)}</span></span>
+          <span className={`font-medium ${isPositive ? "text-green-500 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}>
+            {isPositive ? "+" : ""}
+            {change.toFixed(2)} ({isPositive ? "+" : ""}
+            {percentChange.toFixed(2)}%)
+          </span>
+        </div>
+        <div className="text-muted-foreground ml-auto">
+          Volume SMA 9{" "}
+          <span className="font-medium">
             {averageVolume >= 1000000
               ? `${(averageVolume / 1000000).toFixed(2)}M`
               : averageVolume >= 1000
               ? `${(averageVolume / 1000).toFixed(2)}K`
               : averageVolume.toFixed(0)}
-          </div>
+          </span>
         </div>
       </div>
 
-      {/* Chart Area */}
-      <div className="flex-1 relative" style={{ minHeight: "500px" }}>
+      {/* Chart Area - Using ResponsiveContainer for smooth resize */}
+      <div className="flex-1 relative min-h-[500px]" style={{ minHeight: "500px" }}>
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
             data={chartDataFormatted}
-            margin={{ top: 10, right: 30, left: 10, bottom: 80 }}
+            margin={{ top: 10, right: 60, left: 10, bottom: 80 }}
           >
             <defs>
               <linearGradient id="volumeGradientUp" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
-                <stop offset="95%" stopColor="#10b981" stopOpacity={0.2} />
+                <stop offset="5%" stopColor="#4caf50" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="#4caf50" stopOpacity={0.2} />
               </linearGradient>
               <linearGradient id="volumeGradientDown" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8} />
-                <stop offset="95%" stopColor="#ef4444" stopOpacity={0.2} />
+                <stop offset="5%" stopColor="#ef5350" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="#ef5350" stopOpacity={0.2} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+            <CartesianGrid 
+              strokeDasharray="3 3" 
+              stroke={gridColor} 
+              vertical={false}
+              strokeWidth={1}
+            />
             <XAxis
               dataKey="date"
               type="number"
               scale="time"
               domain={["dataMin", "dataMax"]}
-              tick={{ fontSize: 11, fill: "#666" }}
+              tick={{ fontSize: 11, fill: textColor }}
               tickFormatter={(value) => {
                 try {
-                  return format(new Date(value), selectedPeriod === "1d" ? "HH:mm" : selectedPeriod === "1m" ? "MMM dd" : "MMM yyyy");
+                  return format(new Date(value), selectedPeriod === "1d" || selectedPeriod === "5d" ? "HH:mm" : selectedPeriod === "1m" || selectedPeriod === "3m" ? "MMM dd" : "MMM yyyy");
                 } catch {
                   return "";
                 }
@@ -690,7 +661,7 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
             <YAxis
               yAxisId="price"
               orientation="right"
-              tick={{ fontSize: 11, fill: "#666" }}
+              tick={{ fontSize: 11, fill: textColor }}
               axisLine={false}
               domain={yAxisDomain}
               width={60}
@@ -703,31 +674,34 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
               domain={[0, maxVolume * 1.2]}
               hide
             />
-            <Tooltip content={<CustomTooltip />} />
-            {hoveredData && (
-              <ReferenceLine
-                yAxisId="price"
-                x={hoveredData.date}
-                stroke="#10b981"
-                strokeWidth={1}
-                strokeDasharray="5 5"
-                opacity={0.5}
-              />
-            )}
+            <Tooltip 
+              content={<CustomTooltip onShow={handleTooltipShow} onHide={handleTooltipHide} />}
+              cursor={{ stroke: theme === "dark" ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.1)", strokeWidth: 1, strokeDasharray: "5 5" }}
+              animationDuration={0}
+              trigger="hover"
+              allowEscapeViewBox={{ x: false, y: false }}
+            />
             <ReferenceLine
               yAxisId="price"
               y={currentPrice}
-              stroke="#10b981"
+              stroke={theme === "dark" ? "rgba(76, 175, 80, 0.5)" : "rgba(76, 175, 80, 0.3)"}
               strokeWidth={1}
               strokeDasharray="3 3"
               opacity={0.5}
             />
-            {/* Candlesticks - using high for positioning, then rendering custom shape */}
+            {/* Candlesticks */}
             <Bar
               yAxisId="price"
               dataKey="high"
               fill="transparent"
-              shape={CandlestickBar}
+              shape={(props: any) => {
+                // Add domain info to payload for proper rendering
+                if (props?.payload) {
+                  props.payload.domainMin = yAxisDomain[0];
+                  props.payload.domainMax = yAxisDomain[1];
+                }
+                return <CandlestickShape {...props} />;
+              }}
             >
               {chartDataFormatted.map((entry, index) => (
                 <Cell key={`candle-${index}`} />
@@ -737,7 +711,7 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
             <Bar
               yAxisId="volume"
               dataKey="volume"
-              fill="#10b981"
+              fill="#4caf50"
               opacity={0.6}
               radius={[2, 2, 0, 0]}
             >
@@ -752,19 +726,19 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
         </ResponsiveContainer>
       </div>
 
-      {/* Bottom Controls */}
-      <div className="px-4 py-2 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
+      {/* Bottom Controls - Matching Groww */}
+      <div className="px-4 py-2 border-t border-border bg-muted/30 flex items-center justify-between">
         <div className="flex items-center gap-2">
           {timeframes.map((tf) => (
             <Button
               key={tf.value}
               variant="ghost"
               size="sm"
-              onClick={() => setSelectedPeriod(tf.value)}
+              onClick={() => handleTimeframeChange(tf.value)}
               className={`h-7 px-3 text-xs ${
                 selectedPeriod === tf.value
-                  ? "bg-primary text-white hover:bg-primary/90"
-                  : "text-gray-600 hover:bg-gray-200"
+                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                  : "text-muted-foreground hover:bg-muted"
               }`}
             >
               {tf.label}
@@ -774,7 +748,7 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
             <Calendar className="w-3 h-3" />
           </Button>
         </div>
-        <div className="flex items-center gap-2 text-xs text-gray-600">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span>{format(new Date(), "HH:mm:ss 'UTC+5:30'")}</span>
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
@@ -793,4 +767,4 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
   );
 };
 
-export default CandlestickChartComponent;
+export default memo(CandlestickChartComponent);
