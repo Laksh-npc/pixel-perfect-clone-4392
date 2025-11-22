@@ -145,6 +145,8 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<any>(null);
   const mousePositionRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const rafRef = useRef<number | null>(null);
+  const isMouseInChartRef = useRef<boolean>(false);
   
   // Separate state for OHLC display - only for header update
   const [displayOHLC, setDisplayOHLC] = useState<any>(null);
@@ -174,6 +176,15 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
   const low = priceInfo.intraDayHighLow?.min || priceInfo.low || 0;
   const close = priceInfo.lastPrice || priceInfo.close || 0;
   const isPositive = change >= 0;
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+      }
+    };
+  }, []);
 
   // Memoize data fetching to prevent multiple calls
   const fetchChartData = useCallback(async () => {
@@ -465,76 +476,115 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
     setOverlayState(prev => ({ ...prev, visible: false }));
   }, []);
 
-  // Mouse event handlers for smooth hover - updates refs only
+  // Mouse event handlers with requestAnimationFrame for performance
   const handleChartMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (!chartContainerRef.current) return;
     
-    const rect = chartContainerRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    
-    // Get chart boundaries (accounting for margins in ResponsiveContainer)
-    const chartHeight = rect.height;
-    const chartWidth = rect.width;
-    
-    const leftMargin = 10;
-    const rightMargin = 60;
-    const topMargin = 10;
-    const bottomMargin = 80;
-    
-    const chartArea = {
-      left: leftMargin,
-      right: chartWidth - rightMargin,
-      top: topMargin,
-      bottom: chartHeight - bottomMargin,
-    };
-    
-    // Check if cursor is in chart area
-    if (
-      x < chartArea.left ||
-      x > chartArea.right ||
-      y < chartArea.top ||
-      y > chartArea.bottom
-    ) {
-      setOverlayState(prev => ({ ...prev, visible: false }));
-      return;
+    // Cancel any pending animation frame
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
     }
     
-    // Calculate position in chart coordinates (0 to 1)
-    const normalizedX = (x - chartArea.left) / (chartArea.right - chartArea.left);
-    const chartDataIndex = Math.max(
-      0,
-      Math.min(
-        chartDataFormatted.length - 1,
-        Math.round(normalizedX * (chartDataFormatted.length - 1))
-      )
-    );
-    
-    if (chartDataIndex >= 0 && chartDataIndex < chartDataFormatted.length) {
-      const dataPoint = chartDataFormatted[chartDataIndex];
-      hoveredDataRef.current = dataPoint;
+    // Use requestAnimationFrame for smooth updates
+    rafRef.current = requestAnimationFrame(() => {
+      if (!chartContainerRef.current) return;
       
-      // Only update state if data actually changed
-      setDisplayOHLC(prev => {
-        if (prev?.date === dataPoint.date) return prev;
-        return dataPoint;
-      });
+      const rect = chartContainerRef.current.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
       
-      // Update overlay with smooth position and data
-      setOverlayState({
-        visible: true,
-        x,
-        y,
-        price: dataPoint.close || dataPoint.high || 0,
-        date: new Date(dataPoint.date).toISOString(),
-      });
-    }
+      // Get chart boundaries (accounting for margins in ResponsiveContainer)
+      const chartHeight = rect.height;
+      const chartWidth = rect.width;
+      
+      const leftMargin = 10;
+      const rightMargin = 60;
+      const topMargin = 10;
+      const bottomMargin = 80;
+      
+      const chartArea = {
+        left: leftMargin,
+        right: chartWidth - rightMargin,
+        top: topMargin,
+        bottom: chartHeight - bottomMargin,
+      };
+      
+      // Check if cursor is in chart area - use strict boundaries
+      const isInChartArea = (
+        x >= chartArea.left &&
+        x <= chartArea.right &&
+        y >= chartArea.top &&
+        y <= chartArea.bottom
+      );
+      
+      if (!isInChartArea) {
+        // Only hide if we were previously inside
+        if (isMouseInChartRef.current) {
+          isMouseInChartRef.current = false;
+          setOverlayState(prev => {
+            if (prev.visible) {
+              return { ...prev, visible: false };
+            }
+            return prev;
+          });
+          setDisplayOHLC(null);
+        }
+        return;
+      }
+      
+      // We're inside the chart area
+      isMouseInChartRef.current = true;
+      
+      // Calculate position in chart coordinates (0 to 1)
+      const normalizedX = (x - chartArea.left) / (chartArea.right - chartArea.left);
+      const chartDataIndex = Math.max(
+        0,
+        Math.min(
+          chartDataFormatted.length - 1,
+          Math.round(normalizedX * (chartDataFormatted.length - 1))
+        )
+      );
+      
+      if (chartDataIndex >= 0 && chartDataIndex < chartDataFormatted.length) {
+        const dataPoint = chartDataFormatted[chartDataIndex];
+        hoveredDataRef.current = dataPoint;
+        
+        // Only update state if data actually changed
+        setDisplayOHLC(prev => {
+          if (prev?.date === dataPoint.date) return prev;
+          return dataPoint;
+        });
+        
+        // Update overlay with EXACT cursor position - crosshair follows cursor
+        setOverlayState(prev => ({
+          visible: true,
+          x, // Exact cursor X position
+          y, // Exact cursor Y position
+          price: dataPoint.close || dataPoint.high || 0,
+          date: new Date(dataPoint.date).toISOString(),
+        }));
+      }
+    });
   }, [chartDataFormatted]);
 
-  const handleChartMouseLeave = useCallback(() => {
-    setOverlayState(prev => ({ ...prev, visible: false }));
-    setDisplayOHLC(null);
-    hoveredDataRef.current = null;
+  const handleChartMouseLeave = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    // Cancel any pending animation frame
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    
+    // Check if we're actually leaving the container
+    const relatedTarget = e.relatedTarget as HTMLElement | null;
+    const currentTarget = e.currentTarget as HTMLElement;
+    
+    // Only hide if we're truly leaving (not moving to a child element)
+    if (!relatedTarget || !currentTarget.contains(relatedTarget)) {
+      isMouseInChartRef.current = false;
+      setOverlayState(prev => ({ ...prev, visible: false }));
+      setDisplayOHLC(null);
+      hoveredDataRef.current = null;
+    }
   }, []);
 
   // Grid color based on theme
@@ -717,85 +767,134 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
         ref={chartContainerRef}
         onMouseMove={handleChartMouseMove}
         onMouseLeave={handleChartMouseLeave}
+        onMouseEnter={(e) => {
+          // Only set to true if we're actually entering from outside
+          if (!isMouseInChartRef.current) {
+            isMouseInChartRef.current = true;
+          }
+        }}
       >
         {/* Crosshair and overlay - rendered with transform for performance */}
         {overlayState.visible && (
           <>
-            {/* Crosshair lines - using absolute positioning for smoothness */}
-            <svg
-              className="absolute inset-0 w-full h-full pointer-events-none z-30"
+            {/* Crosshair lines - using absolute positioning for smoothness, positioned relative to container */}
+            <div
+              className="absolute inset-0 pointer-events-none z-30"
               style={{ overflow: "visible" }}
             >
-              <defs>
-                <filter id="glow">
-                  <feGaussianBlur stdDeviation="0.5" result="coloredBlur" />
-                  <feMerge>
-                    <feMergeNode in="coloredBlur" />
-                    <feMergeNode in="SourceGraphic" />
-                  </feMerge>
-                </filter>
-              </defs>
-              
-              {/* Vertical line */}
-              <line
-                x1={overlayState.x}
-                y1="0"
-                x2={overlayState.x}
-                y2="100%"
-                stroke="rgba(255, 255, 255, 0.12)"
-                strokeWidth="1"
-                vectorEffect="non-scaling-stroke"
-                filter="url(#glow)"
+              {/* Vertical line - dashed like Groww */}
+              <div
+                className="absolute top-0 bottom-0 w-px"
+                style={{
+                  left: `${overlayState.x}px`,
+                  background: `repeating-linear-gradient(
+                    to bottom,
+                    ${theme === "dark" ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.2)"} 0px,
+                    ${theme === "dark" ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.2)"} 4px,
+                    transparent 4px,
+                    transparent 8px
+                  )`,
+                }}
               />
               
-              {/* Horizontal line */}
-              <line
-                x1="0"
-                y1={overlayState.y}
-                x2="100%"
-                y2={overlayState.y}
-                stroke="rgba(255, 255, 255, 0.12)"
-                strokeWidth="1"
-                vectorEffect="non-scaling-stroke"
-                filter="url(#glow)"
+              {/* Horizontal line - dashed like Groww */}
+              <div
+                className="absolute left-0 right-0 h-px"
+                style={{
+                  top: `${overlayState.y}px`,
+                  background: `repeating-linear-gradient(
+                    to right,
+                    ${theme === "dark" ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.2)"} 0px,
+                    ${theme === "dark" ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.2)"} 4px,
+                    transparent 4px,
+                    transparent 8px
+                  )`,
+                }}
               />
               
-              {/* Center plus icon */}
-              <g transform={`translate(${overlayState.x}, ${overlayState.y})`} filter="url(#glow)">
-                <circle cx="0" cy="0" r="4" fill="none" stroke="rgba(255, 255, 255, 0.5)" strokeWidth="1.2" />
-                <line x1="-3" y1="0" x2="3" y2="0" stroke="rgba(255, 255, 255, 0.6)" strokeWidth="1.5" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-                <line x1="0" y1="-3" x2="0" y2="3" stroke="rgba(255, 255, 255, 0.6)" strokeWidth="1.5" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-              </g>
-            </svg>
+              {/* Center plus icon - positioned exactly at cursor */}
+              <div
+                className="absolute"
+                style={{
+                  left: `${overlayState.x}px`,
+                  top: `${overlayState.y}px`,
+                  transform: "translate(-50%, -50%)",
+                  width: "10px",
+                  height: "10px",
+                }}
+              >
+                <div
+                  className="absolute inset-0 rounded-full"
+                  style={{
+                    backgroundColor: theme === "dark" ? "rgba(0, 0, 0, 0.8)" : "rgba(255, 255, 255, 0.9)",
+                    border: `1px solid ${theme === "dark" ? "rgba(255, 255, 255, 0.6)" : "rgba(0, 0, 0, 0.6)"}`,
+                  }}
+                />
+                <div
+                  className="absolute"
+                  style={{
+                    left: "50%",
+                    top: "50%",
+                    transform: "translate(-50%, -50%)",
+                    width: "8px",
+                    height: "2px",
+                    backgroundColor: theme === "dark" ? "rgba(255, 255, 255, 0.9)" : "rgba(0, 0, 0, 0.9)",
+                    borderRadius: "1px",
+                  }}
+                />
+                <div
+                  className="absolute"
+                  style={{
+                    left: "50%",
+                    top: "50%",
+                    transform: "translate(-50%, -50%)",
+                    width: "2px",
+                    height: "8px",
+                    backgroundColor: theme === "dark" ? "rgba(255, 255, 255, 0.9)" : "rgba(0, 0, 0, 0.9)",
+                    borderRadius: "1px",
+                  }}
+                />
+              </div>
+            </div>
 
-            {/* Price overlay box - Groww style */}
+            {/* Price overlay box - Moves with horizontal line (y position) */}
             <div
-              className="absolute bg-black/90 px-3 py-1.5 rounded text-xs font-bold text-white shadow-xl border border-white/20 z-40 whitespace-nowrap"
+              className="absolute bg-black/90 dark:bg-white/90 px-3 py-1.5 rounded text-xs font-bold text-white dark:text-black shadow-xl border border-white/20 dark:border-black/20 z-40 whitespace-nowrap"
               style={{
                 pointerEvents: "none",
-                top: `${Math.max(10, overlayState.y - 30)}px`,
+                top: `${Math.max(10, Math.min(overlayState.y - 15, window.innerHeight - 100))}px`,
                 right: "15px",
                 backdropFilter: "blur(4px)",
                 transform: "translateZ(0)",
                 willChange: "top",
               }}
             >
-              ⊕ {overlayState.price.toFixed(2)}
+              + {overlayState.price.toFixed(2)}
             </div>
 
-            {/* Date/Time overlay box - Groww style */}
+            {/* Date/Time overlay box - Moves with vertical line (x position) */}
             <div
-              className="absolute bg-black/90 px-3 py-1.5 rounded text-xs font-semibold text-white shadow-xl border border-white/20 z-40 text-center"
+              className="absolute bg-black/90 dark:bg-white/90 px-3 py-1.5 rounded text-xs font-semibold text-white dark:text-black shadow-xl border border-white/20 dark:border-black/20 z-40 text-center whitespace-nowrap"
               style={{
                 pointerEvents: "none",
                 bottom: "85px",
-                left: "50%",
-                transform: "translateX(-50%) translateZ(0)",
-                backdropFilter: "blur(4px)",
-                willChange: "transform",
+                left: `${Math.max(10, Math.min(overlayState.x - 60, window.innerWidth - 130))}px`,
+                transform: "translateZ(0)",
+                willChange: "left",
               }}
             >
-              {format(new Date(overlayState.date), "dd MMM yy · HH:mm")}
+              {(() => {
+                try {
+                  const date = new Date(overlayState.date);
+                  const day = date.getDate();
+                  const month = format(date, "MMM");
+                  const year = format(date, "yy");
+                  const time = format(date, "HH:mm");
+                  return `${day} ${month} '${year} · ${time}`;
+                } catch {
+                  return format(new Date(overlayState.date), "dd MMM 'yy · HH:mm");
+                }
+              })()}
             </div>
           </>
         )}
@@ -850,32 +949,25 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
               domain={yAxisDomain}
               width={60}
             />
+            {/* Volume axis - completely hidden, no rendering */}
             <YAxis
               yAxisId="volume"
               orientation="right"
               tick={false}
               axisLine={false}
               domain={[0, maxVolume * 1.2]}
-              hide
+              hide={true}
+              width={0}
             />
             <Tooltip 
               content={<CustomTooltip />}
               cursor={false}
               animationDuration={0}
               trigger="hover"
+              active={false}
               allowEscapeViewBox={{ x: false, y: false }}
             />
-            {/* Custom Crosshair - Horizontal line at hovered price */}
-            {displayOHLC && (
-              <ReferenceLine
-                yAxisId="price"
-                y={displayOHLC.close || displayOHLC.high}
-                stroke={theme === "dark" ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.15)"}
-                strokeWidth={1}
-                strokeDasharray="5 5"
-                ifOverflow="extendDomain"
-              />
-            )}
+            {/* Current price reference line - only one reference line */}
             <ReferenceLine
               yAxisId="price"
               y={currentPrice}
