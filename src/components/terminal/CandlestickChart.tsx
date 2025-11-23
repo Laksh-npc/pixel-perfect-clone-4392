@@ -47,91 +47,178 @@ const CustomTooltip = memo(({ active, payload }: any) => {
 
 CustomTooltip.displayName = "CustomTooltip";
 
-// Memoized candlestick shape component - Fixed to work with Recharts properly
+// Memoized candlestick shape component - Simplified to use Recharts coordinate system correctly
 const CandlestickShape = memo((props: any) => {
   const { x, y, width, payload } = props;
   
-  if (!payload || payload.high === undefined || payload.low === undefined) return null;
+  if (!payload || payload.high === undefined || payload.low === undefined || 
+      payload.open === undefined || payload.close === undefined) return null;
 
   const isUp = payload.close >= payload.open;
-  // Groww colors: green #4caf50, red #ef5350 (matching screenshots)
+  const theme = payload.theme || "light";
+  
+  // Groww exact colors
   const color = isUp 
-    ? "#4caf50" // Groww green
-    : "#ef5350"; // Groww red
+    ? (theme === "dark" ? "#00C46A" : "#22C55E")
+    : (theme === "dark" ? "#FF5F5F" : "#EF4444");
   
   const centerX = x + width / 2;
-  const candleWidth = Math.max(width * 0.6, 2);
+  // Thick candles matching Groww - 85% width for thick appearance
+  const candleWidth = Math.max(width * 0.85, 2);
   const candleX = x + (width - candleWidth) / 2;
 
-  // Calculate relative positions based on price range
-  // The y position is for the high price
-  const priceRange = payload.high - payload.low;
-  if (priceRange === 0) {
-    // Single price point
+  const domainMin = payload.domainMin;
+  const domainMax = payload.domainMax;
+  
+  if (!domainMin || !domainMax || domainMax === domainMin) return null;
+  
+  const domainRange = domainMax - domainMin;
+  const highPrice = payload.high;
+  const lowPrice = payload.low;
+  const openPrice = payload.open;
+  const closePrice = payload.close;
+  
+  // Single price point - flat line
+  if (Math.abs(highPrice - lowPrice) < 0.001 && Math.abs(openPrice - closePrice) < 0.001) {
     return (
-      <g>
-        <line x1={centerX} y1={y} x2={centerX} y2={y} stroke={color} strokeWidth={2} />
-        <rect x={candleX} y={y - 1.5} width={candleWidth} height={3} fill={color} />
+      <g style={{ shapeRendering: "geometricPrecision" }}>
+        <line 
+          x1={centerX} 
+          y1={y} 
+          x2={centerX} 
+          y2={y} 
+          stroke={color} 
+          strokeWidth={1}
+          strokeLinecap="round"
+        />
+        <rect 
+          x={candleX} 
+          y={y - 1} 
+          width={candleWidth} 
+          height={2} 
+          fill={color}
+          style={{ shapeRendering: "geometricPrecision" }}
+        />
       </g>
     );
   }
-
-  // Calculate pixel positions based on price differences from high
-  // We need to estimate chart height - use a reasonable default (400px available height)
-  const chartHeight = 400;
+  
+  // Calculate positions using Recharts coordinate system
+  // In Recharts, y-axis is inverted: smaller price values = higher y position (closer to top)
+  // The 'y' prop is the pixel position for the 'high' price value
+  
+  // Calculate the scale factor: pixels per price unit
+  // We know: highPrice maps to y position
+  // We also know the domain range, so we can calculate the scale
+  
+  // Get chart area dimensions (margins: top=10, bottom=100, from ComposedChart)
   const marginTop = 10;
-  const marginBottom = 80;
-  const availableHeight = chartHeight - marginTop - marginBottom;
+  const marginBottom = 100;
   
-  // Get domain from parent if available, otherwise estimate
-  const domainMin = payload.domainMin || (payload.high - priceRange * 1.1);
-  const domainMax = payload.domainMax || (payload.high + priceRange * 0.1);
-  const domainRange = domainMax - domainMin;
+  // Calculate normalized positions in domain (0 = domainMin, 1 = domainMax)
+  // In Recharts YAxis: higher prices = lower y pixel values (visually at top)
+  // The coordinate system is inverted: y = marginTop + (1 - normalizedValue) * chartAreaHeight
   
-  if (domainRange === 0) return null;
+  const highNorm = (highPrice - domainMin) / domainRange;
+  const lowNorm = (lowPrice - domainMin) / domainRange;
+  const openNorm = (openPrice - domainMin) / domainRange;
+  const closeNorm = (closePrice - domainMin) / domainRange;
   
-  // Price to pixel ratio
-  const priceToPixel = availableHeight / domainRange;
-  
-  // Calculate positions relative to high (which is at y)
+  // The 'y' prop from Recharts is the pixel position for 'high'
+  // Use this to calibrate the chart area height
   const highY = y;
-  const lowDiff = payload.high - payload.low;
-  const lowY = y + (lowDiff * priceToPixel);
-  const openDiff = payload.high - payload.open;
-  const closeDiff = payload.high - payload.close;
-  const openY = y + (openDiff * priceToPixel);
-  const closeY = y + (closeDiff * priceToPixel);
   
+  // Reverse-engineer chartAreaHeight from the known highY position
+  // Formula: y = marginTop + (1 - norm) * chartAreaHeight
+  // Therefore: chartAreaHeight = (y - marginTop) / (1 - norm)
+  let chartAreaHeight: number;
+  if (highNorm < 1 && highNorm > 0 && highY > marginTop) {
+    chartAreaHeight = (highY - marginTop) / (1 - highNorm);
+  } else {
+    // Fallback calculation - estimate based on typical chart dimensions
+    chartAreaHeight = 310; // Estimated: 400px total - 10px top - 80px bottom
+  }
+  
+  // Calculate pixel positions for all values using the calibrated chartAreaHeight
+  // Higher normalized values (higher prices) = lower y positions (visually higher on chart)
+  const lowY = marginTop + (1 - lowNorm) * chartAreaHeight;
+  const openY = marginTop + (1 - openNorm) * chartAreaHeight;
+  const closeY = marginTop + (1 - closeNorm) * chartAreaHeight;
+  
+  // Calculate body bounds (open and close form the body)
   const bodyTop = Math.min(openY, closeY);
   const bodyBottom = Math.max(openY, closeY);
-  const bodyHeight = Math.max(bodyBottom - bodyTop, 1);
+  const bodyHeight = Math.max(bodyBottom - bodyTop, 0.5);
 
   return (
-    <g>
-      {/* High-Low wick */}
+    <g style={{ shapeRendering: "geometricPrecision" }}>
+      {/* Wick - thin line matching candle color */}
       <line
         x1={centerX}
         y1={highY}
         x2={centerX}
         y2={lowY}
         stroke={color}
-        strokeWidth={1.5}
+        strokeWidth={1}
+        strokeLinecap="round"
       />
-      {/* Candle body */}
+      {/* Candle body - crisp rectangle, no borders */}
       <rect
         x={candleX}
         y={bodyTop}
         width={candleWidth}
         height={bodyHeight}
         fill={color}
-        stroke={color}
-        strokeWidth={0.5}
+        style={{ shapeRendering: "geometricPrecision" }}
       />
     </g>
   );
 });
 
 CandlestickShape.displayName = "CandlestickShape";
+
+// Memoized volume bar shape component - Groww style
+const VolumeBarShape = memo((props: any) => {
+  const { x, y, width, height, payload } = props;
+  const theme = payload?.theme || "light";
+  
+  if (!payload || payload.volume === undefined || payload.volume === 0 || height <= 0) return null;
+  
+  const isUp = payload.close >= payload.open;
+  // Same colors as candles
+  const color = isUp 
+    ? (theme === "dark" ? "#00C46A" : "#22C55E")
+    : (theme === "dark" ? "#FF5F5F" : "#EF4444");
+  
+  // Opacity: 30% light mode, 40% dark mode (matching Groww)
+  const opacity = theme === "dark" ? 0.4 : 0.3;
+  
+  // Thick bars matching Groww - 85% width for thick appearance
+  const barWidth = Math.max(width * 0.85, 2);
+  const barX = x + (width - barWidth) / 2;
+  
+  // In Recharts, for volume bars at bottom with domain starting at 0:
+  // - y is the bottom coordinate (base of the bar)
+  // - height is the bar height (already calculated by Recharts)
+  // - Bars grow upward, so render from (y - height) to y
+  const barTop = y - height;
+  
+  return (
+    <rect
+      x={barX}
+      y={Math.max(0, barTop)} // Ensure bar doesn't go above chart
+      width={barWidth}
+      height={height}
+      fill={color}
+      fillOpacity={opacity}
+      rx={1}
+      ry={1}
+      style={{ shapeRendering: "geometricPrecision" }}
+    />
+  );
+});
+
+VolumeBarShape.displayName = "VolumeBarShape";
 
 const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartProps) => {
   const { theme } = useTheme();
@@ -198,6 +285,256 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
 
       switch (selectedPeriod) {
         case "1d":
+          // For 1d, fetch 3 days of data (previous 3 trading days)
+          try {
+            // Get today's date
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            // Calculate previous 3 trading days (skip weekends)
+            const tradingDays: Date[] = [];
+            let checkDate = new Date(today);
+            let daysBack = 0;
+            
+            while (tradingDays.length < 3 && daysBack < 10) {
+              checkDate = new Date(today);
+              checkDate.setDate(checkDate.getDate() - daysBack);
+              const dayOfWeek = checkDate.getDay();
+              // Skip weekends (0 = Sunday, 6 = Saturday)
+              if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+                tradingDays.push(new Date(checkDate));
+              }
+              daysBack++;
+            }
+            
+            // Sort trading days (oldest first)
+            tradingDays.sort((a, b) => a.getTime() - b.getTime());
+            
+            // Fetch historical data for these 3 days
+            const oldestDate = tradingDays[0];
+            const newestDate = tradingDays[tradingDays.length - 1];
+            
+            const historicalStart = format(oldestDate, "yyyy-MM-dd");
+            const historicalEnd = format(newestDate, "yyyy-MM-dd");
+            
+            try {
+              const historicalData = await api.getStockHistoricalData(symbol, historicalStart, historicalEnd);
+              
+              // Process historical data to extract intraday-like timestamps
+              const historicalPoints: any[] = [];
+              
+              if (Array.isArray(historicalData)) {
+                historicalData.forEach((period: any) => {
+                  if (period?.data && Array.isArray(period.data)) {
+                    period.data.forEach((item: any) => {
+                      const timestamp = item.CH_TIMESTAMP || item.TIMESTAMP || item.date || item.timestamp;
+                      const open = item.CH_OPENING_PRICE || item.OPEN || item.open || item.o;
+                      const high = item.CH_TRADE_HIGH_PRICE || item.HIGH || item.high || item.h;
+                      const low = item.CH_TRADE_LOW_PRICE || item.LOW || item.low || item.l;
+                      const close = item.CH_LAST_TRADED_PRICE || item.CH_CLOSING_PRICE || item.CLOSE || item.close || item.c;
+                      const volume = item.CH_TOT_TRADED_QTY || item.VOLUME || item.volume || item.v || 0;
+                      
+                      if (timestamp) {
+                        const ts = timestamp instanceof Date ? timestamp.getTime() : new Date(timestamp).getTime();
+                        historicalPoints.push({
+                          timestamp: ts,
+                          price: close || open || high || low,
+                          volume: volume,
+                          open: open !== undefined && open !== null ? open : close,
+                          high: high !== undefined && high !== null ? high : close,
+                          low: low !== undefined && low !== null ? low : close,
+                          close: close !== undefined && close !== null ? close : open,
+                        });
+                      }
+                    });
+                  }
+                });
+              }
+              
+              // Generate intraday timestamps for each trading day (9:15 AM - 4:00 PM, 5-minute intervals)
+              tradingDays.forEach((tradingDay) => {
+                const marketOpen = new Date(tradingDay);
+                marketOpen.setHours(9, 15, 0, 0);
+                const marketClose = new Date(tradingDay);
+                marketClose.setHours(16, 0, 0, 0);
+                
+                // Generate 5-minute intervals
+                let currentTime = new Date(marketOpen);
+                while (currentTime <= marketClose) {
+                  const dayData = historicalPoints.find(p => {
+                    const pDate = new Date(p.timestamp);
+                    return pDate.toDateString() === tradingDay.toDateString();
+                  });
+                  
+                  if (dayData) {
+                    formatted.push({
+                      timestamp: currentTime.getTime(),
+                      price: dayData.close,
+                      volume: dayData.volume || 0,
+                      open: dayData.open,
+                      high: dayData.high,
+                      low: dayData.low,
+                      close: dayData.close,
+                    });
+                  }
+                  
+                  currentTime = new Date(currentTime.getTime() + 5 * 60 * 1000); // Add 5 minutes
+                }
+              });
+              
+              // Also try to get today's intraday data if available
+              try {
+                const intradayData = await api.getStockIntradayData(symbol);
+                const graphDataArray = intradayData?.graphData || intradayData?.grapthData;
+                
+                if (graphDataArray && Array.isArray(graphDataArray) && graphDataArray.length > 0) {
+                  graphDataArray.forEach((dataPoint: any) => {
+                    let timestamp: number;
+                    let price: number;
+                    let volume: number = 0;
+                    
+                    if (Array.isArray(dataPoint)) {
+                      [timestamp, price] = dataPoint;
+                    } else if (dataPoint.timestamp && dataPoint.price) {
+                      timestamp = dataPoint.timestamp;
+                      price = dataPoint.price;
+                      volume = dataPoint.volume || 0;
+                    } else {
+                      return;
+                    }
+                    
+                    if (!timestamp || !price || price <= 0) return;
+                    
+                    // Only add if it's from one of our trading days
+                    const dataDate = new Date(timestamp);
+                    const isInRange = tradingDays.some(day => 
+                      dataDate.toDateString() === day.toDateString()
+                    );
+                    
+                    if (isInRange) {
+                      formatted.push({
+                        timestamp: timestamp,
+                        price: price,
+                        volume: volume,
+                        open: price,
+                        high: price,
+                        low: price,
+                        close: price,
+                      });
+                    }
+                  });
+                }
+              } catch (intradayError) {
+                // Intraday data not available, continue with historical
+              }
+              
+              // Group into 5-minute intervals for candlesticks
+              const grouped: { [key: number]: any } = {};
+              
+              formatted.forEach((point: any) => {
+                const date = new Date(point.timestamp);
+                const minutes = date.getMinutes();
+                const roundedMinutes = Math.floor(minutes / 5) * 5;
+                const groupKey = new Date(date);
+                groupKey.setMinutes(roundedMinutes, 0, 0);
+                const key = groupKey.getTime();
+
+                if (!grouped[key]) {
+                  grouped[key] = {
+                    date: key,
+                    open: point.open || point.price,
+                    high: point.high || point.price,
+                    low: point.low || point.price,
+                    close: point.close || point.price,
+                    volume: point.volume || 0,
+                    timeframe: selectedPeriod,
+                  };
+                } else {
+                  grouped[key].high = Math.max(grouped[key].high, point.high || point.price);
+                  grouped[key].low = Math.min(grouped[key].low, point.low || point.price);
+                  grouped[key].close = point.close || point.price;
+                  grouped[key].volume += (point.volume || 0);
+                }
+              });
+
+              formatted = Object.values(grouped)
+                .sort((a: any, b: any) => a.date - b.date);
+
+              if (formatted.length > 0) {
+                setChartData(formatted);
+                setLoading(false);
+                return;
+              }
+            } catch (histError) {
+              console.warn("Historical data fetch failed for 1d:", histError);
+            }
+          } catch (error: any) {
+            console.warn("Error fetching 1d data:", error?.message);
+          }
+          // Fallback: try just today's intraday data
+          try {
+            const intradayData = await api.getStockIntradayData(symbol);
+            const graphDataArray = intradayData?.graphData || intradayData?.grapthData;
+            
+            if (graphDataArray && Array.isArray(graphDataArray) && graphDataArray.length > 0) {
+              const grouped: { [key: number]: any } = {};
+              
+              graphDataArray.forEach((dataPoint: any) => {
+                let timestamp: number;
+                let price: number;
+                let volume: number = 0;
+                
+                if (Array.isArray(dataPoint)) {
+                  [timestamp, price] = dataPoint;
+                } else if (dataPoint.timestamp && dataPoint.price) {
+                  timestamp = dataPoint.timestamp;
+                  price = dataPoint.price;
+                  volume = dataPoint.volume || 0;
+                } else {
+                  return;
+                }
+                
+                if (!timestamp || !price || price <= 0) return;
+                
+                const date = new Date(timestamp);
+                const minutes = date.getMinutes();
+                const roundedMinutes = Math.floor(minutes / 5) * 5;
+                const groupKey = new Date(date);
+                groupKey.setMinutes(roundedMinutes, 0, 0);
+                const key = groupKey.getTime();
+
+                if (!grouped[key]) {
+                  grouped[key] = {
+                    date: key,
+                    open: price,
+                    high: price,
+                    low: price,
+                    close: price,
+                    volume: volume,
+                    timeframe: selectedPeriod,
+                  };
+                } else {
+                  grouped[key].high = Math.max(grouped[key].high, price);
+                  grouped[key].low = Math.min(grouped[key].low, price);
+                  grouped[key].close = price;
+                  grouped[key].volume += volume;
+                }
+              });
+
+              formatted = Object.values(grouped)
+                .sort((a: any, b: any) => a.date - b.date);
+
+              if (formatted.length > 0) {
+                setChartData(formatted);
+                setLoading(false);
+                return;
+              }
+            }
+          } catch (intradayError: any) {
+            console.warn("Intraday data not available:", intradayError?.message);
+          }
+          startDate.setDate(startDate.getDate() - 1);
+          break;
         case "5d":
           try {
             const intradayData = await api.getStockIntradayData(symbol);
@@ -261,11 +598,7 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
           } catch (intradayError: any) {
             console.warn("Intraday data not available:", intradayError?.message);
           }
-          if (selectedPeriod === "5d") {
-            startDate.setDate(startDate.getDate() - 5);
-          } else {
-            startDate.setDate(startDate.getDate() - 1);
-          }
+          startDate.setDate(startDate.getDate() - 5);
           break;
         case "1m":
           startDate.setMonth(startDate.getMonth() - 1);
@@ -587,8 +920,8 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
     }
   }, []);
 
-  // Grid color based on theme
-  const gridColor = theme === "dark" ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.06)";
+  // Grid color based on theme - matching Groww exactly
+  const gridColor = theme === "dark" ? "#3A3F45" : "#E5E7EB";
   const textColor = theme === "dark" ? "rgba(255, 255, 255, 0.7)" : "rgba(0, 0, 0, 0.6)";
 
   if (loading) {
@@ -902,7 +1235,7 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
             data={chartDataFormatted}
-            margin={{ top: 10, right: 60, left: 10, bottom: 80 }}
+            margin={{ top: 10, right: 60, left: 10, bottom: 100 }}
             onMouseMove={(state: any) => {
               // Capture SVG reference from Recharts
               if (state?.chartX !== undefined && state?.chartY !== undefined) {
@@ -910,16 +1243,6 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
               }
             }}
           >
-            <defs>
-              <linearGradient id="volumeGradientUp" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#4caf50" stopOpacity={0.8} />
-                <stop offset="95%" stopColor="#4caf50" stopOpacity={0.2} />
-              </linearGradient>
-              <linearGradient id="volumeGradientDown" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#ef5350" stopOpacity={0.8} />
-                <stop offset="95%" stopColor="#ef5350" stopOpacity={0.2} />
-              </linearGradient>
-            </defs>
             <CartesianGrid 
               strokeDasharray="3 3" 
               stroke={gridColor} 
@@ -931,7 +1254,12 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
               type="number"
               scale="time"
               domain={["dataMin", "dataMax"]}
-              tick={{ fontSize: 11, fill: textColor }}
+              tick={{ 
+                fontSize: 11, 
+                fill: textColor,
+                fontWeight: 400,
+                fontFamily: "system-ui, -apple-system, sans-serif"
+              }}
               tickFormatter={(value) => {
                 try {
                   return format(new Date(value), selectedPeriod === "1d" || selectedPeriod === "5d" ? "HH:mm" : selectedPeriod === "1m" || selectedPeriod === "3m" ? "MMM dd" : "MMM yyyy");
@@ -944,12 +1272,17 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
             <YAxis
               yAxisId="price"
               orientation="right"
-              tick={{ fontSize: 11, fill: textColor }}
+              tick={{ 
+                fontSize: 11, 
+                fill: textColor,
+                fontWeight: 400,
+                fontFamily: "system-ui, -apple-system, sans-serif"
+              }}
               axisLine={false}
               domain={yAxisDomain}
               width={60}
             />
-            {/* Volume axis - completely hidden, no rendering */}
+            {/* Volume axis - positioned at bottom for histogram */}
             <YAxis
               yAxisId="volume"
               orientation="right"
@@ -982,10 +1315,11 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
               dataKey="high"
               fill="transparent"
               shape={(props: any) => {
-                // Add domain info to payload for proper rendering
+                // Add domain info and theme to payload for proper rendering
                 if (props?.payload) {
                   props.payload.domainMin = yAxisDomain[0];
                   props.payload.domainMax = yAxisDomain[1];
+                  props.payload.theme = theme;
                 }
                 return <CandlestickShape {...props} />;
               }}
@@ -994,19 +1328,21 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
                 <Cell key={`candle-${index}`} />
               ))}
             </Bar>
-            {/* Volume histogram */}
+            {/* Volume histogram - Groww style: flat colors, proper opacity */}
             <Bar
               yAxisId="volume"
               dataKey="volume"
-              fill="#4caf50"
-              opacity={0.6}
-              radius={[2, 2, 0, 0]}
+              fill="transparent"
+              shape={(props: any) => {
+                // Add theme to payload for proper rendering
+                if (props?.payload) {
+                  props.payload.theme = theme;
+                }
+                return <VolumeBarShape {...props} />;
+              }}
             >
               {chartDataFormatted.map((entry, index) => (
-                <Cell
-                  key={`volume-${index}`}
-                  fill={entry.isUp ? "url(#volumeGradientUp)" : "url(#volumeGradientDown)"}
-                />
+                <Cell key={`volume-${index}`} />
               ))}
             </Bar>
           </ComposedChart>
