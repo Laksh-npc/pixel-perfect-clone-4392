@@ -62,8 +62,8 @@ const CandlestickShape = memo((props: any) => {
     : (theme === "dark" ? "#FF5F5F" : "#EF4444");
   
   const centerX = x + width / 2;
-  // Thick candles matching Groww - 85% width for thick appearance
-  const candleWidth = Math.max(width * 0.85, 2);
+  // Thick candles matching Groww - 92% width for thick appearance
+  const candleWidth = Math.max(width * 0.92, 3);
   const candleX = x + (width - candleWidth) / 2;
 
   const domainMin = payload.domainMin;
@@ -110,9 +110,9 @@ const CandlestickShape = memo((props: any) => {
   // We know: highPrice maps to y position
   // We also know the domain range, so we can calculate the scale
   
-  // Get chart area dimensions (margins: top=10, bottom=100, from ComposedChart)
+  // Get chart area dimensions (margins: top=10, bottom=120, from ComposedChart)
   const marginTop = 10;
-  const marginBottom = 100;
+  const marginBottom = 120;
   
   // Calculate normalized positions in domain (0 = domainMin, 1 = domainMax)
   // In Recharts YAxis: higher prices = lower y pixel values (visually at top)
@@ -138,30 +138,42 @@ const CandlestickShape = memo((props: any) => {
     chartAreaHeight = 310; // Estimated: 400px total - 10px top - 80px bottom
   }
   
-  // Calculate pixel positions for all values using the calibrated chartAreaHeight
+  // Reserve bottom 25% for volume histogram - candlesticks use top 75%
+  // Calculate the split point (75% of chart area for candlesticks)
+  const candlestickAreaHeight = chartAreaHeight * 0.75;
+  const volumeSectionStart = marginTop + candlestickAreaHeight;
+  
+  // Calculate pixel positions for all values using only the top 75% of chart area
   // Higher normalized values (higher prices) = lower y positions (visually higher on chart)
-  const lowY = marginTop + (1 - lowNorm) * chartAreaHeight;
-  const openY = marginTop + (1 - openNorm) * chartAreaHeight;
-  const closeY = marginTop + (1 - closeNorm) * chartAreaHeight;
+  const lowY = marginTop + (1 - lowNorm) * candlestickAreaHeight;
+  const openY = marginTop + (1 - openNorm) * candlestickAreaHeight;
+  const closeY = marginTop + (1 - closeNorm) * candlestickAreaHeight;
+  
+  // Ensure candlesticks don't extend into volume area (with 5px gap)
+  const maxCandleY = volumeSectionStart - 5;
   
   // Calculate body bounds (open and close form the body)
   const bodyTop = Math.min(openY, closeY);
-  const bodyBottom = Math.max(openY, closeY);
+  const bodyBottom = Math.min(Math.max(openY, closeY), maxCandleY);
   const bodyHeight = Math.max(bodyBottom - bodyTop, 0.5);
+  
+  // Clamp wick to not extend into volume area
+  const clampedHighY = Math.max(highY, marginTop);
+  const clampedLowY = Math.min(lowY, maxCandleY);
 
   return (
     <g style={{ shapeRendering: "geometricPrecision" }}>
-      {/* Wick - thin line matching candle color */}
+      {/* Wick - thin line matching candle color, clamped to candlestick area */}
       <line
         x1={centerX}
-        y1={highY}
+        y1={clampedHighY}
         x2={centerX}
-        y2={lowY}
+        y2={clampedLowY}
         stroke={color}
         strokeWidth={1}
         strokeLinecap="round"
       />
-      {/* Candle body - crisp rectangle, no borders */}
+      {/* Candle body - crisp rectangle, no borders, clamped to candlestick area */}
       <rect
         x={candleX}
         y={bodyTop}
@@ -192,20 +204,48 @@ const VolumeBarShape = memo((props: any) => {
   // Opacity: 30% light mode, 40% dark mode (matching Groww)
   const opacity = theme === "dark" ? 0.4 : 0.3;
   
-  // Thick bars matching Groww - 85% width for thick appearance
-  const barWidth = Math.max(width * 0.85, 2);
+  // Thick bars matching Groww - 92% width for thick appearance
+  const barWidth = Math.max(width * 0.92, 3);
   const barX = x + (width - barWidth) / 2;
   
-  // In Recharts, for volume bars at bottom with domain starting at 0:
-  // - y is the bottom coordinate (base of the bar)
-  // - height is the bar height (already calculated by Recharts)
-  // - Bars grow upward, so render from (y - height) to y
-  const barTop = y - height;
+  // In Recharts Bar component with Y-axis domain [0, max]:
+  // - The 'y' prop should be the BOTTOM coordinate of the bar (where it touches the x-axis)
+  // - The 'height' prop is the height of the bar
+  // - Bars grow UPWARD from the bottom, so we render from (y - height) to y
+  // 
+  // However, when the Y-axis is hidden, Recharts might not correctly calculate the bottom position.
+  // We need to ensure bars are anchored to the actual bottom of the chart.
+  //
+  // The 'y' prop from Recharts should represent the bottom of the bar.
+  // For volume bars, we want them anchored to the x-axis (bottom of chart).
+  // If 'y' is not at the bottom, we need to calculate the correct bottom position.
+  
+  // Chart margins: top=10, bottom=120
+  const marginBottom = 120;
+  const marginTop = 10;
+  
+  // Get the chart container - we need to estimate the chart height
+  // In a typical 500px container: height = 500 - marginTop - marginBottom = 370px
+  // The bottom of the chart area (x-axis level) would be at: containerHeight - marginBottom
+  // But we don't have direct access to container height here, so we use 'y' as provided by Recharts
+  
+  // The 'y' prop should be the bottom coordinate when volume maps to the Y-axis domain
+  // For domain [0, max], when volume = 0, y should be at the bottom
+  // When volume > 0, y should still be at the bottom, and height grows upward
+  
+  // Use 'y' as the bottom of the bar (x-axis level)
+  // Bars grow upward, so top is at (y - height)
+  const barBottom = y; // This should be the x-axis level
+  const barTop = barBottom - height; // Top of bar (grows upward from bottom)
+  
+  // If bars are floating, it means 'y' is not at the bottom
+  // In that case, we might need to manually calculate the bottom position
+  // But first, let's trust Recharts and use the provided 'y' coordinate
   
   return (
     <rect
       x={barX}
-      y={Math.max(0, barTop)} // Ensure bar doesn't go above chart
+      y={barTop} // Top of the bar (bars grow upward from bottom)
       width={barWidth}
       height={height}
       fill={color}
@@ -1234,7 +1274,7 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
             data={chartDataFormatted}
-            margin={{ top: 10, right: 60, left: 10, bottom: 100 }}
+            margin={{ top: 10, right: 60, left: 10, bottom: 120 }}
             onMouseMove={(state: any) => {
               // Capture SVG reference from Recharts
               if (state?.chartX !== undefined && state?.chartY !== undefined) {
@@ -1270,14 +1310,15 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
               width={60}
             />
             {/* Volume axis - positioned at bottom for histogram */}
+            {/* Keep Y-axis visible (not hidden) so Recharts calculates bottom position correctly */}
             <YAxis
               yAxisId="volume"
               orientation="right"
               tick={false}
               axisLine={false}
               domain={[0, maxVolume * 1.2]}
-              hide={true}
               width={0}
+              style={{ display: 'none' }}
             />
             <Tooltip 
               content={<CustomTooltip />}
@@ -1321,9 +1362,11 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
               dataKey="volume"
               fill="transparent"
               shape={(props: any) => {
-                // Add theme to payload for proper rendering
+                // Add theme and chart info to payload for proper rendering
                 if (props?.payload) {
                   props.payload.theme = theme;
+                  // Pass chart container ref to calculate bottom position
+                  props.payload.chartContainerRef = chartContainerRef;
                 }
                 return <VolumeBarShape {...props} />;
               }}
