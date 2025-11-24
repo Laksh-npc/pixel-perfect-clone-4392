@@ -47,96 +47,70 @@ const MarketMovers = () => {
         setLoading(true);
         setError(null);
         
-        // For Gainers: Use specific stocks from the image
-        const gainerSymbols = ["MARUTI", "MAXHEALTH", "INDIGO", "M&M", "TATACONSUM", "UNITDSPR"];
-        
-        // For Losers: Fetch from universe and filter for losses (not more than 5%)
+        // Use reliable symbols that are more likely to have data
         const symbols = UNIVERSE_TO_SYMBOLS[universe as keyof typeof UNIVERSE_TO_SYMBOLS] || [];
+        const allSymbols = symbols.length > 0 ? symbols : ["RELIANCE", "TCS", "HDFCBANK", "INFY", "ITC", "HINDUNILVR", "ICICIBANK", "SBIN", "LT", "BHARTIARTL", "BAJFINANCE", "BAJAJFINSV", "KOTAKBANK", "ASIANPAINT", "MARUTI", "SUNPHARMA", "AXISBANK", "NTPC", "POWERGRID", "ONGC"];
         
-        // Fetch gainers data
-        const gainerPromises = gainerSymbols.map(symbol => 
-          api.getStockDetails(symbol).catch((error: any) => {
-            // Silently handle errors - don't log expected network/backend errors
-            if (error?.message && !error.message.includes('getaddrinfo') && !error.message.includes('ENOTFOUND') && !error.message.includes('Network error') && !error.message.includes('API 400') && !error.message.includes('API 500')) {
-              // Only log unexpected errors
-              console.warn(`Failed to fetch gainer ${symbol}:`, error.message);
-            }
-            return null;
-          })
-        );
-        const gainerDetails = await Promise.all(gainerPromises);
-        
-        // Convert gainer details to rows
-        const gainerRows = gainerDetails
-          .map((stock, index) => {
+        // Fetch all stocks individually (more reliable than batch)
+        const stockPromises = allSymbols.slice(0, 50).map(symbol => 
+          api.getStockDetails(symbol).then(stock => {
             if (!stock || !stock.priceInfo || !stock.info) return null;
             const priceInfo = stock.priceInfo;
             const info = stock.info;
             const last = Number(priceInfo.lastPrice || 0);
             const prev = Number(priceInfo.previousClose || last);
             const volume = Number(priceInfo.tradedQuantity || 0);
-            // Use API's calculated change and pChange (same as StockDetail page)
             const changeAbs = Number(priceInfo.change || 0);
             const changePct = Number(priceInfo.pChange || 0);
             
-            // Only include if positive change (gainers)
-            if (changePct <= 0 || last <= 0) return null;
+            if (last <= 0) return null;
             
             return {
-              symbol: info.symbol || gainerSymbols[index],
-              name: info.companyName || gainerSymbols[index],
+              symbol: info.symbol || symbol,
+              name: info.companyName || symbol,
               last,
               prev,
               volume,
               changeAbs,
               changePct,
             };
-          })
+          }).catch(() => null)
+        );
+        
+        const allStockRows = (await Promise.all(stockPromises))
           .filter((r): r is any => r !== null);
         
-        // Fetch losers data from universe
-        const chunkSize = 80;
-        const chunks: string[][] = [];
-        if (symbols.length > 0) {
-          for (let i = 0; i < symbols.length; i += chunkSize) {
-            chunks.push(symbols.slice(i, i + chunkSize));
-          }
-        } else {
-          chunks.push([]);
-        }
-        
-        const responses = await Promise.all(
-          chunks.map(c => api.getEquitiesBySymbols(c.length > 0 ? c : []).catch(() => []))
-        );
-        const equities = responses.flat().filter(e => e && e.symbol);
-        const allRows = toRows(equities);
-        
-        // Filter losers: only negative change, but not more than 5% loss
-        const loserRows = allRows.filter(r => {
-          return r.symbol && r.name && r.last > 0 && r.changePct < 0 && r.changePct >= -5;
-        });
-        
-        // Filter volume shockers
-        const validRows = allRows.filter(r => r.symbol && r.name && r.last > 0);
-        
-        // Sort and limit
-        const g = [...gainerRows]
+        // Filter and sort gainers (positive change)
+        const gainerRows = allStockRows
+          .filter(r => r.changePct > 0)
           .sort((a, b) => b.changePct - a.changePct)
           .slice(0, 7);
-        const l = [...loserRows]
+        
+        // Filter and sort losers (negative change, but not more than 5% loss)
+        const loserRows = allStockRows
+          .filter(r => r.changePct < 0 && r.changePct >= -5)
           .sort((a, b) => a.changePct - b.changePct)
           .slice(0, 7);
-        const v = [...validRows]
+        
+        // Filter and sort volume shockers
+        const volumeRows = allStockRows
+          .filter(r => r.volume > 0)
           .sort((a, b) => b.volume - a.volume)
           .slice(0, 7);
         
         if (active) {
-          setGainers(g.map(mapRowToStock));
-          setLosers(l.map(mapRowToStock));
-          setVolumeShockers(v.map(mapRowToStock));
+          setGainers(gainerRows.map(mapRowToStock));
+          setLosers(loserRows.map(mapRowToStock));
+          setVolumeShockers(volumeRows.map(mapRowToStock));
         }
       } catch (e: any) {
-        if (active) setError(e?.message || "Failed to load movers");
+        if (active) {
+          setError(e?.message || "Failed to load movers");
+          // Set empty arrays on error
+          setGainers([]);
+          setLosers([]);
+          setVolumeShockers([]);
+        }
       } finally {
         if (active) setLoading(false);
       }
@@ -151,26 +125,6 @@ const MarketMovers = () => {
     if (tab === "LOSERS") return losers;
     return volumeShockers;
   }, [tab, gainers, losers, volumeShockers]);
-
-  function toRows(equities: any[]) {
-    return equities
-      .filter((e) => {
-        // Filter out invalid entries
-        const last = Number(e.details?.price?.last || 0);
-        const symbol = e.symbol;
-        return last > 0 && symbol;
-      })
-      .map((e) => {
-        const symbol = e.symbol;
-        const name = e.details?.info?.companyName || symbol;
-        const last = Number(e.details?.price?.last || 0);
-        const prev = Number(e.details?.price?.previousClose || last);
-        const volume = Number(e.details?.price?.tradedQuantity || 0);
-        const changeAbs = last - prev;
-        const changePct = prev ? (changeAbs / prev) * 100 : 0;
-        return { symbol, name, last, prev, volume, changeAbs, changePct };
-      });
-  }
 
   function mapRowToStock(row: any) {
     const positive = row.changeAbs >= 0;

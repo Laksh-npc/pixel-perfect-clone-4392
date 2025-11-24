@@ -103,8 +103,6 @@ const Header = () => {
   const getActiveNav = () => {
     if (location.pathname === "/") return "explore";
     if (location.pathname === "/holdings") return "holdings";
-    if (location.pathname.includes("/positions")) return "positions";
-    if (location.pathname.includes("/orders")) return "orders";
     if (location.pathname.includes("/watchlist")) return "watchlist";
     if (location.pathname.includes("/dsfm-analysis")) return "dsfm";
     return "explore";
@@ -187,26 +185,6 @@ const Header = () => {
               }`}
             >
               Holdings
-            </button>
-            <button 
-              onClick={() => navigate("/positions")}
-              className={`py-3 border-b-2 font-medium text-sm transition-colors ${
-                activeNav === "positions"
-                  ? "border-gray-900 dark:border-white text-gray-900 dark:text-white" 
-                  : "border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-              }`}
-            >
-              Positions
-            </button>
-            <button 
-              onClick={() => navigate("/orders")}
-              className={`py-3 border-b-2 font-medium text-sm transition-colors ${
-                activeNav === "orders"
-                  ? "border-gray-900 dark:border-white text-gray-900 dark:text-white" 
-                  : "border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-              }`}
-            >
-              Orders
             </button>
             <button 
               onClick={() => navigate("/watchlist")}

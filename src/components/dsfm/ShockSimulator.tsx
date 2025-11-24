@@ -15,7 +15,7 @@ import { propagateShock, computeShockTimeline, ShockImpact } from "@/services/ds
 import { shockApi, ShockSimulationResponse } from "@/services/dsfm/shockApi";
 import { StockData } from "@/services/dsfm/dataFetcher";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { ChevronDown, ChevronRight, Info, Download } from "lucide-react";
+import { ChevronDown, ChevronRight, Info } from "lucide-react";
 import ShockPriceComparison from "./ShockPriceComparison";
 
 interface ShockSimulatorProps {
@@ -177,35 +177,6 @@ const ShockSimulator = ({ networkGraph, correlationMatrix, stockData, loading, t
       .slice(0, 20);
   }, [activeResult]);
 
-  // Export CSV
-  const exportCSV = () => {
-    if (!activeResult) return;
-    
-    const rows = [
-      ['Stock', 'Initial Shock (%)', 'Final Shock (%)', 'Distance', 'Correlation Link', 'Closest Source'].join(',')
-    ];
-    
-    impactTableData.forEach(impact => {
-      const closestSource = impact.path?.[0] || 'N/A';
-      rows.push([
-        impact.symbol.replace('.NS', ''),
-        (impact.initialShock * 100).toFixed(2),
-        (impact.finalShock * 100).toFixed(4),
-        impact.distance.toString(),
-        impact.correlationLink.toFixed(4),
-        closestSource
-      ].join(','));
-    });
-    
-    const csv = rows.join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `shock_simulation_${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
 
   // Network visualization
   useEffect(() => {
@@ -516,12 +487,6 @@ const ShockSimulator = ({ networkGraph, correlationMatrix, stockData, loading, t
         <div>
           <div className="flex items-center justify-between mb-2">
             <h4 className="text-sm font-semibold">Network Shock Map</h4>
-            {activeResult && (
-              <Button variant="outline" size="sm" onClick={exportCSV}>
-                <Download className="w-3 h-3 mr-1" />
-                Export CSV
-              </Button>
-            )}
           </div>
           <div 
             ref={networkRef} 
