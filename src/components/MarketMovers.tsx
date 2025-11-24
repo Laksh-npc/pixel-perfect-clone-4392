@@ -47,19 +47,36 @@ const MarketMovers = () => {
         setLoading(true);
         setError(null);
         
-        // Use reliable symbols that are more likely to have data
+        // Use specific stocks from the reference image for gainers
+        // Tech Mahindra, Eicher Motors, Bajaj Auto, Wipro, Torrent Pharma, Canara Bank
+        const gainerSymbols = ["TECHM", "EICHERMOT", "BAJAJ-AUTO", "WIPRO", "TORNTPHARM", "CANBK"];
+        
+        // Use reliable symbols from universe for losers and volume shockers
         const symbols = UNIVERSE_TO_SYMBOLS[universe as keyof typeof UNIVERSE_TO_SYMBOLS] || [];
         const allSymbols = symbols.length > 0 ? symbols : ["RELIANCE", "TCS", "HDFCBANK", "INFY", "ITC", "HINDUNILVR", "ICICIBANK", "SBIN", "LT", "BHARTIARTL", "BAJFINANCE", "BAJAJFINSV", "KOTAKBANK", "ASIANPAINT", "MARUTI", "SUNPHARMA", "AXISBANK", "NTPC", "POWERGRID", "ONGC"];
         
-        // Fetch all stocks individually (more reliable than batch)
-        const stockPromises = allSymbols.slice(0, 50).map(symbol => 
-          api.getStockDetails(symbol).then(stock => {
+        // Fetch gainers first (specific stocks from reference image)
+        const gainerPromises = gainerSymbols.map(async symbol => {
+          try {
+            const [stock, tradeInfo] = await Promise.all([
+              api.getStockDetails(symbol),
+              api.getStockTradeInfo(symbol).catch(() => null)
+            ]);
+            
             if (!stock || !stock.priceInfo || !stock.info) return null;
             const priceInfo = stock.priceInfo;
             const info = stock.info;
             const last = Number(priceInfo.lastPrice || 0);
             const prev = Number(priceInfo.previousClose || last);
-            const volume = Number(priceInfo.tradedQuantity || 0);
+            
+            // Get volume from multiple sources (same as Watchlist)
+            const volume = Number(
+              tradeInfo?.totalTradedVolume || 
+              priceInfo.totalTradedVolume || 
+              priceInfo.tradedQuantity || 
+              0
+            );
+            
             const changeAbs = Number(priceInfo.change || 0);
             const changePct = Number(priceInfo.pChange || 0);
             
@@ -74,17 +91,81 @@ const MarketMovers = () => {
               changeAbs,
               changePct,
             };
-          }).catch(() => null)
-        );
+          } catch {
+            return null;
+          }
+        });
         
-        const allStockRows = (await Promise.all(stockPromises))
-          .filter((r): r is any => r !== null);
+        // Fetch other stocks for losers and volume shockers
+        const otherStockPromises = allSymbols.slice(0, 50).map(async symbol => {
+          // Skip if already in gainer symbols
+          if (gainerSymbols.includes(symbol)) return null;
+          
+          try {
+            const [stock, tradeInfo] = await Promise.all([
+              api.getStockDetails(symbol),
+              api.getStockTradeInfo(symbol).catch(() => null)
+            ]);
+            
+            if (!stock || !stock.priceInfo || !stock.info) return null;
+            const priceInfo = stock.priceInfo;
+            const info = stock.info;
+            const last = Number(priceInfo.lastPrice || 0);
+            const prev = Number(priceInfo.previousClose || last);
+            
+            // Get volume from multiple sources
+            const volume = Number(
+              tradeInfo?.totalTradedVolume || 
+              priceInfo.totalTradedVolume || 
+              priceInfo.tradedQuantity || 
+              0
+            );
+            
+            const changeAbs = Number(priceInfo.change || 0);
+            const changePct = Number(priceInfo.pChange || 0);
+            
+            if (last <= 0) return null;
+            
+            return {
+              symbol: info.symbol || symbol,
+              name: info.companyName || symbol,
+              last,
+              prev,
+              volume,
+              changeAbs,
+              changePct,
+            };
+          } catch {
+            return null;
+          }
+        });
         
-        // Filter and sort gainers (positive change)
-        const gainerRows = allStockRows
+        const [gainerRowsData, otherStockRows] = await Promise.all([
+          Promise.all(gainerPromises),
+          Promise.all(otherStockPromises)
+        ]);
+        
+        const allGainerRows = gainerRowsData.filter((r): r is any => r !== null);
+        const allOtherRows = otherStockRows.filter((r): r is any => r !== null);
+        const allStockRows = [...allGainerRows, ...allOtherRows];
+        
+        // Filter and sort gainers (positive change) - prioritize the specific gainer symbols
+        // Always show the specific gainer stocks first, sorted by change percentage
+        const gainerRows = allGainerRows
           .filter(r => r.changePct > 0)
-          .sort((a, b) => b.changePct - a.changePct)
-          .slice(0, 7);
+          .sort((a, b) => b.changePct - a.changePct);
+        
+        // If we don't have enough gainers from specific symbols, add from other stocks
+        if (gainerRows.length < 7) {
+          const additionalGainers = allOtherRows
+            .filter(r => r.changePct > 0 && !gainerRows.some(g => g.symbol === r.symbol))
+            .sort((a, b) => b.changePct - a.changePct)
+            .slice(0, 7 - gainerRows.length);
+          gainerRows.push(...additionalGainers);
+        } else {
+          // If we have more than 7, take top 7
+          gainerRows.splice(7);
+        }
         
         // Filter and sort losers (negative change, but not more than 5% loss)
         const loserRows = allStockRows

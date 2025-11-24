@@ -1,4 +1,4 @@
-import { Search, Bell, Terminal, Globe } from "lucide-react";
+import { Search, Bell, Terminal } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useState, useEffect } from "react";
@@ -7,14 +7,10 @@ import SearchModal from "./SearchModal";
 import NotificationPopup from "./NotificationPopup";
 import ProfileDropdown from "./ProfileDropdown";
 import { useTheme } from "@/contexts/ThemeContext";
-import { api } from "@/services/api";
-import { Skeleton } from "./ui/skeleton";
 
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
-  const [indices, setIndices] = useState<Array<{ name: string; value: string; change: string; percent: string; positive: boolean }>>([]);
-  const [loadingIndices, setLoadingIndices] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
   const { theme } = useTheme();
@@ -39,61 +35,6 @@ const Header = () => {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
-
-  // Fetch market indices
-  useEffect(() => {
-    let isMounted = true;
-    (async () => {
-      try {
-        setLoadingIndices(true);
-        const res = await api.getIndices();
-        // Map indices to match the display format
-        const indexMap: Record<string, string> = {
-          'NIFTY 50': 'NIFTY',
-          'NIFTY': 'NIFTY',
-          'SENSEX': 'SENSEX',
-          'NIFTY BANK': 'BANKNIFTY',
-          'BANK NIFTY': 'BANKNIFTY',
-          'BANKNIFTY': 'BANKNIFTY',
-          'NIFTY MIDCAP SELECT': 'MIDCPNIFTY',
-          'NIFTY FINANCIAL SERVICES': 'FINNIFTY',
-        };
-        
-        const targetIndices = ['NIFTY', 'SENSEX', 'BANKNIFTY', 'MIDCPNIFTY', 'FINNIFTY'];
-        const mapped: Array<{ name: string; value: string; change: string; percent: string; positive: boolean }> = [];
-        
-        for (const target of targetIndices) {
-          const found = res.find((idx: any) => {
-            const idxName = idx.index || '';
-            return indexMap[idxName] === target || idxName === target;
-          });
-          
-          if (found) {
-            const last = found.last || 0;
-            const variation = found.variation || 0;
-            const percentChange = found.percentChange || 0;
-            const positive = Number(variation) >= 0;
-            mapped.push({
-              name: target,
-              value: typeof last === "number" ? last.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : String(last),
-              change: `${variation >= 0 ? "+" : ""}${typeof variation === "number" ? variation.toFixed(2) : String(variation)}`,
-              percent: `(${variation >= 0 ? "+" : ""}${typeof percentChange === "number" ? percentChange.toFixed(2) : String(percentChange)}%)`,
-              positive,
-            });
-          }
-        }
-        
-        if (isMounted) setIndices(mapped);
-      } catch (e: any) {
-        console.error("Error fetching indices:", e);
-      } finally {
-        if (isMounted) setLoadingIndices(false);
-      }
-    })();
-    return () => {
-      isMounted = false;
-    };
   }, []);
 
   const handleLogoClick = () => {
@@ -129,6 +70,9 @@ const Header = () => {
                 alt="Groww" 
                 className="w-10 h-10 flex-shrink-0 rounded-full"
               />
+              <span className="text-black dark:text-white font-medium font-semibold text-base">
+                Groww DSFM
+              </span>
             </button>
             <nav className="flex items-center gap-6">
               <button className="text-sm font-medium text-gray-900 dark:text-white border-b-2 border-gray-900 dark:border-white pb-1 transition-colors">
@@ -218,31 +162,6 @@ const Header = () => {
             </button>
             <button className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
               915.trade ↗
-            </button>
-          </div>
-        </div>
-
-        {/* Market Ticker */}
-        <div className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-6 py-2 overflow-x-auto">
-          <div className="flex items-center gap-6 min-w-max">
-            {loadingIndices && (
-              <div className="flex items-center gap-4">
-                <Skeleton className="h-4 w-20" />
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-4 w-28" />
-              </div>
-            )}
-            {!loadingIndices && indices.map((index) => (
-              <div key={index.name} className="flex items-center gap-2 whitespace-nowrap">
-                <span className="font-medium text-sm text-gray-900 dark:text-white">{index.name}:</span>
-                <span className="text-sm text-gray-900 dark:text-white">{index.value}</span>
-                <span className={`text-sm font-medium ${index.positive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                  {index.change} {index.percent}
-                </span>
-              </div>
-            ))}
-            <button className="p-1 hover:bg-gray-200 dark:hover:bg-gray-800 rounded transition-colors ml-auto">
-              <Globe className="w-4 h-4 text-gray-600 dark:text-gray-400" />
             </button>
           </div>
         </div>
