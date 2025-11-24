@@ -1,7 +1,6 @@
-import { useState, useEffect } from "react";
-import { X, Plus, Search } from "lucide-react";
+import { useEffect } from "react";
+import { X, Plus, Bookmark } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -20,8 +19,7 @@ interface WatchlistDialogProps {
 }
 
 const WatchlistDialog = ({ open, onOpenChange, symbol, companyName }: WatchlistDialogProps) => {
-  const { watchlistStocks, watchlistName, addToWatchlist, removeFromWatchlist, isInWatchlist } = useWatchlist();
-  const [searchQuery, setSearchQuery] = useState("");
+  const { watchlistStocks, watchlistName, addToWatchlist, isInWatchlist } = useWatchlist();
   const navigate = useNavigate();
 
   // Add current stock to watchlist if provided and not already in watchlist
@@ -34,124 +32,78 @@ const WatchlistDialog = ({ open, onOpenChange, symbol, companyName }: WatchlistD
     }
   }, [open, symbol, companyName, isInWatchlist, addToWatchlist]);
 
-  const handleAddToWatchlist = () => {
+  const handleSelectWatchlist = () => {
     if (symbol && companyName) {
       addToWatchlist({
         symbol,
         companyName,
       });
     }
-  };
-
-  const handleRemoveFromWatchlist = (stockSymbol: string) => {
-    removeFromWatchlist(stockSymbol);
-  };
-
-  const handleViewWatchlist = () => {
     onOpenChange(false);
     navigate("/watchlist");
   };
 
-  const filteredStocks = watchlistStocks.filter((stock) =>
-    stock.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    stock.symbol.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleCreateNewWatchlist = () => {
+    if (symbol && companyName) {
+      addToWatchlist({
+        symbol,
+        companyName,
+      });
+    }
+    onOpenChange(false);
+    // TODO: Implement create new watchlist functionality
+    console.log("Create new watchlist");
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-lg font-semibold">Add Stock to</DialogTitle>
+      <DialogContent className="sm:max-w-md p-0 gap-0">
+        <DialogHeader className="px-6 pt-6 pb-4">
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-lg font-semibold text-foreground">Add Stock to</DialogTitle>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onOpenChange(false)}
+              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
           <DialogDescription className="sr-only">
             Add stock to your watchlist
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Watchlist Name */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-foreground">{watchlistName}</span>
-              <span className="text-xs text-muted-foreground">
-                ({watchlistStocks.length} {watchlistStocks.length === 1 ? "item" : "items"})
-              </span>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleViewWatchlist}
-              className="h-8 px-3 text-xs text-primary hover:text-primary/90"
-            >
-              View Watchlist
-            </Button>
-          </div>
-
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Search your watchlist"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 h-9 text-sm"
-            />
-          </div>
-
-          {/* Stock List */}
-          <div className="max-h-[300px] overflow-y-auto space-y-1">
-            {filteredStocks.length === 0 ? (
-              <div className="text-center py-8 text-sm text-muted-foreground">
-                {searchQuery ? "No stocks found" : "No stocks in watchlist"}
-              </div>
-            ) : (
-              filteredStocks.map((stock) => (
-                <div
-                  key={stock.symbol}
-                  className="flex items-center justify-between p-2 hover:bg-muted/50 rounded-md transition-colors"
-                >
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <span className="text-xs font-semibold text-primary">
-                        {stock.companyName
-                          .split(" ")
-                          .map((w) => w[0])
-                          .join("")
-                          .substring(0, 2)
-                          .toUpperCase()}
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-foreground truncate">
-                        {stock.companyName}
-                      </div>
-                      <div className="text-xs text-muted-foreground">{stock.symbol}</div>
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleRemoveFromWatchlist(stock.symbol)}
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-              ))
-            )}
-          </div>
-
-          {/* Create New Watchlist Button */}
-          <Button
-            variant="outline"
-            className="w-full h-9 text-sm"
-            onClick={() => {
-              // For now, just show a message - can be extended later
-              console.log("Create new watchlist");
-            }}
+        <div className="px-6 pb-6 space-y-3">
+          {/* Existing Watchlist Option */}
+          <button
+            onClick={handleSelectWatchlist}
+            className="w-full flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors text-left"
           >
-            <Plus className="w-4 h-4 mr-2" />
-            Create New Watchlist
-          </Button>
+            <div className="w-10 h-10 rounded-lg border-2 border-green-600 dark:border-green-500 flex items-center justify-center flex-shrink-0">
+              <Bookmark className="w-5 h-5 text-green-600 dark:text-green-500" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium text-foreground">{watchlistName}</div>
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {watchlistStocks.length} {watchlistStocks.length === 1 ? "item" : "items"}
+            </div>
+          </button>
+
+          {/* Create New Watchlist Option */}
+          <button
+            onClick={handleCreateNewWatchlist}
+            className="w-full flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors text-left"
+          >
+            <div className="w-10 h-10 rounded-lg border-2 border-green-600 dark:border-green-500 flex items-center justify-center flex-shrink-0">
+              <Plus className="w-5 h-5 text-green-600 dark:text-green-500" />
+            </div>
+            <div className="text-sm font-medium text-green-600 dark:text-green-500">
+              Create New Watchlist
+            </div>
+          </button>
         </div>
       </DialogContent>
     </Dialog>

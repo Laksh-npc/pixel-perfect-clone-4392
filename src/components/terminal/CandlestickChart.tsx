@@ -102,7 +102,7 @@ const CandlestickShape = memo((props: any) => {
       </g>
     );
   }
-  
+
   // Calculate positions using Recharts coordinate system
   // In Recharts, y-axis is inverted: smaller price values = higher y position (closer to top)
   // The 'y' prop is the pixel position for the 'high' price value
@@ -383,11 +383,11 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
               });
               
               // Also try to get today's intraday data if available
-              try {
-                const intradayData = await api.getStockIntradayData(symbol);
-                const graphDataArray = intradayData?.graphData || intradayData?.grapthData;
-                
-                if (graphDataArray && Array.isArray(graphDataArray) && graphDataArray.length > 0) {
+          try {
+            const intradayData = await api.getStockIntradayData(symbol);
+            const graphDataArray = intradayData?.graphData || intradayData?.grapthData;
+            
+            if (graphDataArray && Array.isArray(graphDataArray) && graphDataArray.length > 0) {
                   graphDataArray.forEach((dataPoint: any) => {
                     let timestamp: number;
                     let price: number;
@@ -533,7 +533,7 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
           } catch (intradayError: any) {
             console.warn("Intraday data not available:", intradayError?.message);
           }
-          startDate.setDate(startDate.getDate() - 1);
+            startDate.setDate(startDate.getDate() - 1);
           break;
         case "5d":
           try {
