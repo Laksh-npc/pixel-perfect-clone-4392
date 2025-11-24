@@ -29,7 +29,6 @@ const timeframes = [
   { label: "3M", value: "3m" },
   { label: "1M", value: "1m" },
   { label: "5D", value: "5d" },
-  { label: "1D", value: "1d" },
 ];
 
 // Custom Cursor - Returns SVG props for vertical line matching Groww
@@ -222,7 +221,7 @@ VolumeBarShape.displayName = "VolumeBarShape";
 
 const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartProps) => {
   const { theme } = useTheme();
-  const [selectedPeriod, setSelectedPeriod] = useState("1d");
+  const [selectedPeriod, setSelectedPeriod] = useState("5d");
   const [chartData, setChartData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

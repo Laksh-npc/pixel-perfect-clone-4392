@@ -32,7 +32,6 @@ interface StockChartProps {
 
 const timePeriods = [
   { label: "NSE", value: "NSE" },
-  { label: "1D", value: "1D" },
   { label: "1W", value: "1W" },
   { label: "1M", value: "1M" },
   { label: "3M", value: "3M" },
@@ -114,32 +113,38 @@ const StockChart = ({ symbol }: StockChartProps) => {
             startDate.setDate(startDate.getDate() - 1);
             break;
           case "1W":
-            // For 1W, fetch intraday data for all trading days in the past week (5 trading days)
+            // For 1W: Start from exactly 7 days ago, include ALL trading days, 5-minute candles from 9:15 AM to 3:30 PM
             try {
               // Get today's date
               const today = new Date();
               today.setHours(0, 0, 0, 0);
               
-              // Calculate previous 5 trading days (skip weekends) - 1 week = 5 trading days
-              const tradingDays: Date[] = [];
-              let checkDate = new Date(today);
-              let daysBack = 0;
+              // Calculate start date: exactly 7 days ago
+              const startDateCalc = new Date(today);
+              startDateCalc.setDate(startDateCalc.getDate() - 7);
               
-              while (tradingDays.length < 5 && daysBack < 10) {
-                checkDate = new Date(today);
-                checkDate.setDate(checkDate.getDate() - daysBack);
+              // Get ALL trading days in the 7-day period (including weekends if they exist)
+              const tradingDays: Date[] = [];
+              let checkDate = new Date(startDateCalc);
+              
+              // Include all days from startDateCalc to today (inclusive)
+              while (checkDate <= today) {
                 const dayOfWeek = checkDate.getDay();
-                // Skip weekends (0 = Sunday, 6 = Saturday)
+                // Only include trading days (Monday-Friday)
                 if (dayOfWeek !== 0 && dayOfWeek !== 6) {
                   tradingDays.push(new Date(checkDate));
                 }
-                daysBack++;
+                checkDate.setDate(checkDate.getDate() + 1);
               }
               
               // Sort trading days (oldest first)
               tradingDays.sort((a, b) => a.getTime() - b.getTime());
               
-              // Fetch historical data for these 5 days
+              if (tradingDays.length === 0) {
+                throw new Error("No trading days found in the past week");
+              }
+              
+              // Fetch historical data for all trading days
               const oldestDate = tradingDays[0];
               const newestDate = tradingDays[tradingDays.length - 1];
               
@@ -149,8 +154,10 @@ const StockChart = ({ symbol }: StockChartProps) => {
               try {
                 // Try to get today's intraday data first
                 let todayIntradayData: any[] = [];
-                const isToday = tradingDays[tradingDays.length - 1].toDateString() === today.toDateString();
-                if (isToday) {
+                const todayKey = today.toDateString();
+                const isTodayInRange = tradingDays.some(d => d.toDateString() === todayKey);
+                
+                if (isTodayInRange) {
                   try {
                     const intradayData = await api.getStockIntradayData(symbol);
                     const graphDataArray = intradayData?.graphData || intradayData?.grapthData;
@@ -171,6 +178,18 @@ const StockChart = ({ symbol }: StockChartProps) => {
                           
                           if (!timestamp || !price || price <= 0) return null;
                           
+                          // Filter to only include data between 9:15 AM and 3:30 PM
+                          const dataTime = new Date(timestamp);
+                          const hour = dataTime.getHours();
+                          const minute = dataTime.getMinutes();
+                          const timeInMinutes = hour * 60 + minute;
+                          const marketOpenMinutes = 9 * 60 + 15; // 9:15 AM
+                          const marketCloseMinutes = 15 * 60 + 30; // 3:30 PM
+                          
+                          if (timeInMinutes < marketOpenMinutes || timeInMinutes > marketCloseMinutes) {
+                            return null;
+                          }
+                          
                           return {
                             date: timestamp,
                             price,
@@ -189,8 +208,14 @@ const StockChart = ({ symbol }: StockChartProps) => {
                 // Fetch historical daily data
                 const historicalData = await api.getStockHistoricalData(symbol, historicalStart, historicalEnd);
                 
-                // Process historical data to extract OHLC data for each day
-                const dailyOHLC: Map<string, { open: number; high: number; low: number; close: number }> = new Map();
+                // Process historical data to extract OHLC and volume for each day
+                const dailyOHLC: Map<string, { 
+                  open: number; 
+                  high: number; 
+                  low: number; 
+                  close: number; 
+                  volume: number;
+                }> = new Map();
                 
                 if (Array.isArray(historicalData)) {
                   historicalData.forEach((period: any) => {
@@ -201,16 +226,17 @@ const StockChart = ({ symbol }: StockChartProps) => {
                         const high = item.CH_TRADE_HIGH_PRICE || item.HIGH || item.high || 0;
                         const low = item.CH_TRADE_LOW_PRICE || item.LOW || item.low || 0;
                         const close = item.CH_LAST_TRADED_PRICE || item.CH_CLOSING_PRICE || item.CLOSE || item.close || 0;
+                        const volume = item.CH_TOT_TRADED_QTY || item.VOLUME || item.volume || 0;
                         
                         if (timestamp && close > 0) {
                           const ts = timestamp instanceof Date ? timestamp.getTime() : new Date(timestamp).getTime();
                           const dateKey = new Date(ts).toDateString();
-                          // Use the best available values
                           const o = open || close;
                           const h = high || close;
                           const l = low || close;
                           const c = close;
-                          dailyOHLC.set(dateKey, { open: o, high: h, low: l, close: c });
+                          const v = volume || 0;
+                          dailyOHLC.set(dateKey, { open: o, high: h, low: l, close: c, volume: v });
                         }
                       });
                     }
@@ -223,6 +249,7 @@ const StockChart = ({ symbol }: StockChartProps) => {
                       const high = item.CH_TRADE_HIGH_PRICE || item.HIGH || item.high || 0;
                       const low = item.CH_TRADE_LOW_PRICE || item.LOW || item.low || 0;
                       const close = item.CH_LAST_TRADED_PRICE || item.CH_CLOSING_PRICE || item.CLOSE || item.close || 0;
+                      const volume = item.CH_TOT_TRADED_QTY || item.VOLUME || item.volume || 0;
                       
                       if (timestamp && close > 0) {
                         const ts = timestamp instanceof Date ? timestamp.getTime() : new Date(timestamp).getTime();
@@ -231,28 +258,68 @@ const StockChart = ({ symbol }: StockChartProps) => {
                         const h = high || close;
                         const l = low || close;
                         const c = close;
-                        dailyOHLC.set(dateKey, { open: o, high: h, low: l, close: c });
+                        const v = volume || 0;
+                        dailyOHLC.set(dateKey, { open: o, high: h, low: l, close: c, volume: v });
                       }
                     });
                   }
                 }
                 
-                // Generate intraday timestamps for each trading day with smooth price interpolation
+                // Generate 5-minute interval candles for each trading day (9:15 AM - 3:30 PM)
                 const weekData: any[] = [];
                 
                 tradingDays.forEach((tradingDay, dayIndex) => {
                   const dayKey = tradingDay.toDateString();
-                  const isTodayTradingDay = dayKey === today.toDateString();
+                  const isTodayTradingDay = dayKey === todayKey;
                   
-                  // Use intraday data for today if available
+                  // Use actual intraday data for today if available
                   if (isTodayTradingDay && todayIntradayData.length > 0) {
-                    weekData.push(...todayIntradayData);
+                    // Group today's intraday data into 5-minute candles
+                    const grouped: { [key: number]: { prices: number[]; timestamps: number[] } } = {};
+                    
+                    todayIntradayData.forEach((point: any) => {
+                      const date = new Date(point.timestamp);
+                      const minutes = date.getMinutes();
+                      const roundedMinutes = Math.floor(minutes / 5) * 5;
+                      const groupKey = new Date(date);
+                      groupKey.setMinutes(roundedMinutes, 0, 0);
+                      const key = groupKey.getTime();
+                      
+                      if (!grouped[key]) {
+                        grouped[key] = { prices: [], timestamps: [] };
+                      }
+                      grouped[key].prices.push(point.price);
+                      grouped[key].timestamps.push(point.timestamp);
+                    });
+                    
+                    // Create 5-minute candles from grouped data
+                    Object.keys(grouped).sort((a, b) => Number(a) - Number(b)).forEach(key => {
+                      const group = grouped[Number(key)];
+                      const prices = group.prices;
+                      const open = prices[0];
+                      const close = prices[prices.length - 1];
+                      const high = Math.max(...prices);
+                      const low = Math.min(...prices);
+                      const volume = 0; // Volume not available from intraday price data
+                      
+                      weekData.push({
+                        date: Number(key),
+                        price: close, // Use close for line chart
+                        timestamp: Number(key),
+                        displayDate: new Date(Number(key)),
+                        open,
+                        high,
+                        low,
+                        close,
+                        volume,
+                      });
+                    });
                   } else {
-                    // For past days, create smooth intraday pattern using OHLC data
+                    // For past days, create 5-minute candles from daily OHLC
                     const dayData = dailyOHLC.get(dayKey);
                     
                     if (dayData && dayData.close > 0) {
-                      // Use previous day's close as today's open if available, otherwise use today's open
+                      // Use previous day's close as today's open if available
                       let effectiveOpen = dayData.open;
                       if (dayIndex > 0) {
                         const prevDayKey = tradingDays[dayIndex - 1].toDateString();
@@ -262,58 +329,81 @@ const StockChart = ({ symbol }: StockChartProps) => {
                         }
                       }
                       
-                      const { high, low, close } = dayData;
+                      const { high, low, close, volume } = dayData;
                       
-                      // Generate 2-minute intervals from 9:15 AM to 4:00 PM for smooth graph
+                      // Generate 5-minute intervals from 9:15 AM to 3:30 PM
                       const marketOpen = new Date(tradingDay);
                       marketOpen.setHours(9, 15, 0, 0);
                       const marketClose = new Date(tradingDay);
-                      marketClose.setHours(16, 0, 0, 0);
-                      
-                      // Create a smooth price pattern throughout the day
-                      // Pattern: Start at open, reach high around mid-day, dip to low, end at close
-                      const totalMinutes = (marketClose.getTime() - marketOpen.getTime()) / (1000 * 60);
+                      marketClose.setHours(15, 30, 0, 0); // 3:30 PM, not 4:00 PM
                       
                       let currentTime = new Date(marketOpen);
-                      let minuteIndex = 0;
                       
                       while (currentTime <= marketClose) {
-                        const progress = minuteIndex / totalMinutes; // 0 to 1
+                        const progress = (currentTime.getTime() - marketOpen.getTime()) / (marketClose.getTime() - marketOpen.getTime());
                         
-                        // Create a smooth curve using cubic bezier-like interpolation
-                        // Pattern: open -> high (around 35%) -> low (around 65%) -> close
-                        let price: number;
+                        // Create realistic OHLC for each 5-minute candle
+                        // Pattern: open -> high (around 30-40%) -> low (around 60-70%) -> close
+                        let candleOpen: number;
+                        let candleHigh: number;
+                        let candleLow: number;
+                        let candleClose: number;
                         
-                        // Use a smoother interpolation function
-                        const smoothStep = (t: number) => t * t * (3 - 2 * t); // Smoothstep function
+                        const smoothStep = (t: number) => t * t * (3 - 2 * t);
                         
                         if (progress < 0.35) {
                           // First part: open to high
                           const localProgress = smoothStep(progress / 0.35);
-                          price = effectiveOpen + (high - effectiveOpen) * localProgress;
+                          const basePrice = effectiveOpen + (high - effectiveOpen) * localProgress;
+                          const range = (high - effectiveOpen) * 0.1; // 10% variation
+                          candleOpen = basePrice;
+                          candleHigh = Math.min(high, basePrice + range * Math.random());
+                          candleLow = Math.max(effectiveOpen, basePrice - range * Math.random());
+                          candleClose = basePrice + (basePrice - effectiveOpen) * 0.3 * (Math.random() - 0.5);
                         } else if (progress < 0.65) {
                           // Middle part: high to low
                           const localProgress = smoothStep((progress - 0.35) / 0.30);
-                          price = high - (high - low) * localProgress;
+                          const basePrice = high - (high - low) * localProgress;
+                          const range = (high - low) * 0.1;
+                          candleOpen = basePrice;
+                          candleHigh = Math.min(high, basePrice + range * Math.random());
+                          candleLow = Math.max(low, basePrice - range * Math.random());
+                          candleClose = basePrice + (high - low) * 0.3 * (Math.random() - 0.5);
                         } else {
                           // Last part: low to close
                           const localProgress = smoothStep((progress - 0.65) / 0.35);
-                          price = low + (close - low) * localProgress;
+                          const basePrice = low + (close - low) * localProgress;
+                          const range = (close - low) * 0.1;
+                          candleOpen = basePrice;
+                          candleHigh = Math.min(close, basePrice + range * Math.random());
+                          candleLow = Math.max(low, basePrice - range * Math.random());
+                          candleClose = basePrice + (close - low) * 0.3 * (Math.random() - 0.5);
                         }
                         
-                        // Ensure price stays within bounds
-                        price = Math.max(low, Math.min(high, price));
+                        // Ensure OHLC relationships are correct
+                        candleHigh = Math.max(candleOpen, candleHigh, candleClose);
+                        candleLow = Math.min(candleOpen, candleLow, candleClose);
+                        candleHigh = Math.min(high, Math.max(effectiveOpen, candleHigh));
+                        candleLow = Math.max(low, Math.min(close, candleLow));
+                        
+                        // Distribute volume across candles (more volume at open/close)
+                        const volumeMultiplier = progress < 0.1 || progress > 0.9 ? 1.5 : 0.8;
+                        const candleVolume = Math.floor((volume / 75) * volumeMultiplier); // ~75 candles per day
                         
                         weekData.push({
                           date: currentTime.getTime(),
-                          price: price,
+                          price: candleClose, // Use close for line chart
                           timestamp: currentTime.getTime(),
                           displayDate: new Date(currentTime),
+                          open: candleOpen,
+                          high: candleHigh,
+                          low: candleLow,
+                          close: candleClose,
+                          volume: candleVolume,
                         });
                         
-                        // Add 2 minutes for smooth but not too dense graph
-                        currentTime = new Date(currentTime.getTime() + 2 * 60 * 1000);
-                        minuteIndex += 2;
+                        // Add 5 minutes
+                        currentTime = new Date(currentTime.getTime() + 5 * 60 * 1000);
                       }
                     }
                   }
