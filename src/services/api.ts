@@ -251,7 +251,12 @@ export const api = {
       });
       if (!response.ok) {
         const text = await response.text().catch(() => "");
-        // For 404 and 400 errors, throw but allow caller to handle
+        // For 400 and 404 errors, these are expected when data doesn't exist
+        // Don't log or throw - just return null/empty to allow graceful degradation
+        if (response.status === 400 || response.status === 404) {
+          // Silently fail - this is expected behavior when stock data is unavailable
+          throw new Error(`API ${response.status}: Data not available`);
+        }
         // For 500 errors, return null to indicate server error
         if (response.status >= 500) {
           // Only log in development mode when not silent
@@ -259,14 +264,6 @@ export const api = {
             console.warn(`API server error (${response.status}) for ${endpoint}: Backend may be unavailable`);
           }
           throw new Error(`API ${response.status}: Server error`);
-        }
-        // For 400 errors, suppress logging when silent mode is enabled
-        // 400 errors might be due to invalid symbols, malformed requests, or backend validation
-        if (response.status === 400 && !options?.silent) {
-          // Only log in development mode to reduce production noise
-          if (import.meta.env.DEV) {
-            console.debug(`API 400 error for ${endpoint}: ${text.substring(0, 100)}`);
-          }
         }
         // Try to parse JSON error if possible
         let errorMessage = text || response.statusText;

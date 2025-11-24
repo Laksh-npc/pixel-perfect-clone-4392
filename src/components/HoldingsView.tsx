@@ -102,14 +102,15 @@ const HoldingsView = ({ onStockSelect }: HoldingsViewProps) => {
   }
 
   return (
-    <Card className="border-gray-200 dark:border-gray-800 shadow-sm bg-card dark:bg-[#1a1a1a]">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
+    <Card className="border border-gray-200 dark:border-gray-800 shadow-sm bg-white dark:bg-[#1a1a1a] rounded-lg overflow-hidden">
+      <CardHeader className="pb-4 px-5 pt-5">
+        {/* Title with dropdown - Match Groww exactly */}
+        <div className="flex items-center justify-between mb-4">
           <div 
             className="flex items-center gap-2 cursor-pointer"
             onClick={() => setExpanded(!expanded)}
           >
-            <CardTitle className="text-base font-semibold text-gray-900 dark:text-white">
+            <CardTitle className="text-base font-semibold text-gray-900 dark:text-white" style={{ fontSize: '16px', fontWeight: 600 }}>
               Holdings ({holdings.length})
             </CardTitle>
             <ChevronDown 
@@ -128,56 +129,58 @@ const HoldingsView = ({ onStockSelect }: HoldingsViewProps) => {
             >
               {isVisible ? <Eye className="w-4 h-4 text-gray-600 dark:text-gray-400" /> : <EyeOff className="w-4 h-4 text-gray-600 dark:text-gray-400" />}
             </Button>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-gray-100 dark:hover:bg-gray-800">
-              <MoreVertical className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-            </Button>
           </div>
         </div>
 
-        {/* Portfolio Summary - Match Groww style exactly */}
-        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
-          <div className="grid grid-cols-2 gap-4 mb-4">
+        {/* Portfolio Summary Card - Match Groww exactly */}
+        <div className="bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-800 rounded-lg p-4 mb-4">
+          <div className="flex justify-between items-start mb-4">
             <div>
-              <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Current value</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400 mb-1" style={{ fontSize: '12px' }}>Current value</div>
               <VisibilityValue 
                 value={formatCurrency(summary.currentValue)}
-                className="text-sm font-semibold text-gray-900 dark:text-white"
+                className="text-base font-semibold text-gray-900 dark:text-white"
+                style={{ fontSize: '16px', fontWeight: 600 }}
               />
             </div>
             <div className="text-right">
-              <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Invested value</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400 mb-1" style={{ fontSize: '12px' }}>Invested value</div>
               <VisibilityValue 
                 value={formatCurrency(summary.investedAmount)}
-                className="text-sm font-semibold text-gray-900 dark:text-white"
+                className="text-base font-semibold text-gray-900 dark:text-white"
+                style={{ fontSize: '16px', fontWeight: 600 }}
               />
             </div>
           </div>
-          <div className="flex justify-between items-center mb-3">
-            <span className="text-sm text-gray-600 dark:text-gray-400">1D returns</span>
-            <span className={`text-sm font-semibold ${summary.oneDayReturns >= 0 ? "text-green-600 dark:text-green-500" : "text-red-600 dark:text-red-500"}`}>
+          
+          <div className="flex justify-between items-center mb-2 pb-2 border-b border-gray-200 dark:border-gray-800">
+            <span className="text-sm text-gray-600 dark:text-gray-400" style={{ fontSize: '14px' }}>1D returns</span>
+            <span className={`text-sm font-semibold ${summary.oneDayReturns >= 0 ? "text-green-600 dark:text-green-500" : "text-red-600 dark:text-red-500"}`} style={{ fontSize: '14px', fontWeight: 600 }}>
               {isVisible ? (
                 <>
-                  {summary.oneDayReturns >= 0 ? "+" : ""}{formatCurrency(summary.oneDayReturns)} ({formatPercent(summary.oneDayReturnsPercent)})
+                  {summary.oneDayReturns >= 0 ? "" : ""}{formatCurrency(summary.oneDayReturns)} ({formatPercent(summary.oneDayReturnsPercent)})
                 </>
               ) : (
                 <span className="tracking-widest">••••••</span>
               )}
             </span>
           </div>
+          
           <div className="flex justify-between items-center mb-4">
-            <span className="text-sm text-gray-600 dark:text-gray-400">Total returns</span>
-            <span className={`text-sm font-semibold ${summary.totalReturns >= 0 ? "text-green-600 dark:text-green-500" : "text-red-600 dark:text-red-500"}`}>
+            <span className="text-sm text-gray-600 dark:text-gray-400" style={{ fontSize: '14px' }}>Total returns</span>
+            <span className={`text-sm font-semibold ${summary.totalReturns >= 0 ? "text-green-600 dark:text-green-500" : "text-red-600 dark:text-red-500"}`} style={{ fontSize: '14px', fontWeight: 600 }}>
               {isVisible ? (
                 <>
-                  {summary.totalReturns >= 0 ? "+" : ""}{formatCurrency(summary.totalReturns)} ({formatPercent(summary.totalReturnsPercent)})
+                  {summary.totalReturns >= 0 ? "" : ""}{formatCurrency(summary.totalReturns)} ({formatPercent(summary.totalReturnsPercent)})
                 </>
               ) : (
                 <span className="tracking-widest">••••••</span>
               )}
             </span>
           </div>
+          
           <div className="flex items-center gap-2 pt-2 border-t border-gray-200 dark:border-gray-800">
-            <Button variant="outline" size="sm" className="flex-1 h-9 text-sm font-normal border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300">
+            <Button variant="outline" size="sm" className="flex-1 h-9 text-sm font-medium border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300">
               Analyse
             </Button>
             <Button variant="ghost" size="icon" className="h-9 w-9 hover:bg-gray-100 dark:hover:bg-gray-800">
@@ -188,19 +191,19 @@ const HoldingsView = ({ onStockSelect }: HoldingsViewProps) => {
       </CardHeader>
 
       {expanded && (
-        <CardContent className="pt-0">
+        <CardContent className="pt-0 px-5 pb-5">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-200 dark:border-gray-800">
-                  <th className="text-left py-3 px-3 text-xs font-medium text-gray-600 dark:text-gray-400">Company</th>
-                  <th className="text-left py-3 px-3 text-xs font-medium text-gray-600 dark:text-gray-400">
+                  <th className="text-left py-3 px-3 text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide" style={{ fontSize: '12px', fontWeight: 500 }}>Company</th>
+                  <th className="text-left py-3 px-3 text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide" style={{ fontSize: '12px', fontWeight: 500 }}>
                     Market price (1D%) <span className="text-gray-400 dark:text-gray-500">▼</span>
                   </th>
-                  <th className="text-left py-3 px-3 text-xs font-medium text-gray-600 dark:text-gray-400">
+                  <th className="text-left py-3 px-3 text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide" style={{ fontSize: '12px', fontWeight: 500 }}>
                     Returns (%) <span className="text-gray-400 dark:text-gray-500">▼</span>
                   </th>
-                  <th className="text-left py-3 px-3 text-xs font-medium text-gray-600 dark:text-gray-400">
+                  <th className="text-left py-3 px-3 text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide" style={{ fontSize: '12px', fontWeight: 500 }}>
                     Current (Invested) <span className="text-gray-400 dark:text-gray-500">▼</span>
                   </th>
                 </tr>
@@ -221,14 +224,14 @@ const HoldingsView = ({ onStockSelect }: HoldingsViewProps) => {
                     >
                       <td className="py-3 px-3">
                         <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 rounded bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                          <div className="w-10 h-10 rounded bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-xs font-bold flex-shrink-0" style={{ fontSize: '11px' }}>
                             {getCompanyLogo(holding.companyName)}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <div className="text-sm font-medium text-gray-900 dark:text-white mb-0.5">
+                            <div className="text-sm font-medium text-gray-900 dark:text-white mb-0.5" style={{ fontSize: '14px', fontWeight: 500 }}>
                               {holding.companyName}
                             </div>
-                            <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+                            <div className="text-xs text-gray-600 dark:text-gray-400" style={{ fontSize: '12px' }}>
                               {holding.shares} shares • Avg. {isVisible ? formatCurrency(holding.avgPrice) : "••••"}
                             </div>
                           </div>
@@ -242,14 +245,14 @@ const HoldingsView = ({ onStockSelect }: HoldingsViewProps) => {
                                 <AreaChart data={chartData} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
                                   <defs>
                                     <linearGradient id={`gradient-${holding.symbol}`} x1="0" y1="0" x2="0" y2="1">
-                                      <stop offset="0%" stopColor={isPositive ? "#10b981" : "#ef4444"} stopOpacity={0.3} />
-                                      <stop offset="100%" stopColor={isPositive ? "#10b981" : "#ef4444"} stopOpacity={0} />
+                                      <stop offset="0%" stopColor={isPositive ? "#22C55E" : "#EF4444"} stopOpacity={0.3} />
+                                      <stop offset="100%" stopColor={isPositive ? "#22C55E" : "#EF4444"} stopOpacity={0} />
                                     </linearGradient>
                                   </defs>
                                   <Area
                                     type="monotone"
                                     dataKey="price"
-                                    stroke={isPositive ? "#10b981" : "#ef4444"}
+                                    stroke={isPositive ? "#22C55E" : "#EF4444"}
                                     strokeWidth={1.5}
                                     fill={`url(#gradient-${holding.symbol})`}
                                     dot={false}
@@ -260,13 +263,13 @@ const HoldingsView = ({ onStockSelect }: HoldingsViewProps) => {
                             </div>
                           )}
                           <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium text-gray-900 dark:text-white mb-0.5">
+                            <div className="text-sm font-medium text-gray-900 dark:text-white mb-0.5" style={{ fontSize: '14px', fontWeight: 500 }}>
                               <VisibilityValue value={formatCurrency(holding.currentPrice || 0)} />
                             </div>
-                            <div className={`text-xs font-medium ${isPositive ? "text-green-600 dark:text-green-500" : "text-red-600 dark:text-red-500"}`}>
+                            <div className={`text-xs font-medium ${isPositive ? "text-green-600 dark:text-green-500" : "text-red-600 dark:text-red-500"}`} style={{ fontSize: '12px', fontWeight: 500 }}>
                               {isVisible ? (
                                 <>
-                                  {oneDayChange >= 0 ? "+" : ""}{formatCurrency(Math.abs(oneDayChange))} ({oneDayChangePercent >= 0 ? "+" : ""}{oneDayChangePercent.toFixed(2)}%)
+                                  {oneDayChange >= 0 ? "" : ""}{formatCurrency(Math.abs(oneDayChange))} ({oneDayChangePercent >= 0 ? "+" : ""}{oneDayChangePercent.toFixed(2)}%)
                                 </>
                               ) : (
                                 <span className="tracking-widest">••••</span>
@@ -276,22 +279,22 @@ const HoldingsView = ({ onStockSelect }: HoldingsViewProps) => {
                         </div>
                       </td>
                       <td className="py-3 px-3">
-                        <div className={`text-sm font-medium mb-0.5 ${returnsPositive ? "text-green-600 dark:text-green-500" : "text-red-600 dark:text-red-500"}`}>
+                        <div className={`text-sm font-medium mb-0.5 ${returnsPositive ? "text-green-600 dark:text-green-500" : "text-red-600 dark:text-red-500"}`} style={{ fontSize: '14px', fontWeight: 500 }}>
                           {isVisible ? (
-                            <>{returnsPositive ? "+" : ""}{formatCurrency(holding.returns || 0)}</>
+                            <>{returnsPositive ? "" : ""}{formatCurrency(holding.returns || 0)}</>
                           ) : (
                             <span className="tracking-widest">••••</span>
                           )}
                         </div>
-                        <div className={`text-xs font-medium ${returnsPositive ? "text-green-600 dark:text-green-500" : "text-red-600 dark:text-red-500"}`}>
+                        <div className={`text-xs font-medium ${returnsPositive ? "text-green-600 dark:text-green-500" : "text-red-600 dark:text-red-500"}`} style={{ fontSize: '12px', fontWeight: 500 }}>
                           {isVisible ? formatPercent(holding.returnsPercent || 0) : <span className="tracking-widest">••••</span>}
                         </div>
                       </td>
                       <td className="py-3 px-3">
-                        <div className="text-sm font-medium text-gray-900 dark:text-white mb-0.5">
+                        <div className="text-sm font-medium text-gray-900 dark:text-white mb-0.5" style={{ fontSize: '14px', fontWeight: 500 }}>
                           <VisibilityValue value={formatCurrency(holding.currentValue || 0)} />
                         </div>
-                        <div className="text-xs text-gray-600 dark:text-gray-400">
+                        <div className="text-xs text-gray-600 dark:text-gray-400" style={{ fontSize: '12px' }}>
                           <VisibilityValue value={formatCurrency(holding.investedAmount)} />
                         </div>
                       </td>
