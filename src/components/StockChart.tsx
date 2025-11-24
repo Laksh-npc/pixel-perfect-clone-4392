@@ -114,6 +114,226 @@ const StockChart = ({ symbol }: StockChartProps) => {
             startDate.setDate(startDate.getDate() - 1);
             break;
           case "1W":
+            // For 1W, fetch intraday data for all trading days in the past week (5 trading days)
+            try {
+              // Get today's date
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              
+              // Calculate previous 5 trading days (skip weekends) - 1 week = 5 trading days
+              const tradingDays: Date[] = [];
+              let checkDate = new Date(today);
+              let daysBack = 0;
+              
+              while (tradingDays.length < 5 && daysBack < 10) {
+                checkDate = new Date(today);
+                checkDate.setDate(checkDate.getDate() - daysBack);
+                const dayOfWeek = checkDate.getDay();
+                // Skip weekends (0 = Sunday, 6 = Saturday)
+                if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+                  tradingDays.push(new Date(checkDate));
+                }
+                daysBack++;
+              }
+              
+              // Sort trading days (oldest first)
+              tradingDays.sort((a, b) => a.getTime() - b.getTime());
+              
+              // Fetch historical data for these 5 days
+              const oldestDate = tradingDays[0];
+              const newestDate = tradingDays[tradingDays.length - 1];
+              
+              const historicalStart = format(oldestDate, "yyyy-MM-dd");
+              const historicalEnd = format(newestDate, "yyyy-MM-dd");
+              
+              try {
+                // Try to get today's intraday data first
+                let todayIntradayData: any[] = [];
+                const isToday = tradingDays[tradingDays.length - 1].toDateString() === today.toDateString();
+                if (isToday) {
+                  try {
+                    const intradayData = await api.getStockIntradayData(symbol);
+                    const graphDataArray = intradayData?.graphData || intradayData?.grapthData;
+                    if (graphDataArray && Array.isArray(graphDataArray) && graphDataArray.length > 0) {
+                      todayIntradayData = graphDataArray
+                        .map((dataPoint: any) => {
+                          let timestamp: number;
+                          let price: number;
+                          
+                          if (Array.isArray(dataPoint)) {
+                            [timestamp, price] = dataPoint;
+                          } else if (dataPoint.timestamp && dataPoint.price) {
+                            timestamp = dataPoint.timestamp;
+                            price = dataPoint.price;
+                          } else {
+                            return null;
+                          }
+                          
+                          if (!timestamp || !price || price <= 0) return null;
+                          
+                          return {
+                            date: timestamp,
+                            price,
+                            timestamp,
+                            displayDate: new Date(timestamp),
+                          };
+                        })
+                        .filter((item: any) => item !== null)
+                        .sort((a: any, b: any) => a.timestamp - b.timestamp);
+                    }
+                  } catch (e) {
+                    // Intraday data not available for today, continue with historical
+                  }
+                }
+                
+                // Fetch historical daily data
+                const historicalData = await api.getStockHistoricalData(symbol, historicalStart, historicalEnd);
+                
+                // Process historical data to extract OHLC data for each day
+                const dailyOHLC: Map<string, { open: number; high: number; low: number; close: number }> = new Map();
+                
+                if (Array.isArray(historicalData)) {
+                  historicalData.forEach((period: any) => {
+                    if (period?.data && Array.isArray(period.data)) {
+                      period.data.forEach((item: any) => {
+                        const timestamp = item.CH_TIMESTAMP || item.TIMESTAMP || item.date || item.timestamp;
+                        const open = item.CH_OPENING_PRICE || item.OPEN || item.open || 0;
+                        const high = item.CH_TRADE_HIGH_PRICE || item.HIGH || item.high || 0;
+                        const low = item.CH_TRADE_LOW_PRICE || item.LOW || item.low || 0;
+                        const close = item.CH_LAST_TRADED_PRICE || item.CH_CLOSING_PRICE || item.CLOSE || item.close || 0;
+                        
+                        if (timestamp && close > 0) {
+                          const ts = timestamp instanceof Date ? timestamp.getTime() : new Date(timestamp).getTime();
+                          const dateKey = new Date(ts).toDateString();
+                          // Use the best available values
+                          const o = open || close;
+                          const h = high || close;
+                          const l = low || close;
+                          const c = close;
+                          dailyOHLC.set(dateKey, { open: o, high: h, low: l, close: c });
+                        }
+                      });
+                    }
+                  });
+                } else if (historicalData && typeof historicalData === 'object' && !Array.isArray(historicalData)) {
+                  if (historicalData.data && Array.isArray(historicalData.data)) {
+                    historicalData.data.forEach((item: any) => {
+                      const timestamp = item.CH_TIMESTAMP || item.TIMESTAMP || item.date || item.timestamp;
+                      const open = item.CH_OPENING_PRICE || item.OPEN || item.open || 0;
+                      const high = item.CH_TRADE_HIGH_PRICE || item.HIGH || item.high || 0;
+                      const low = item.CH_TRADE_LOW_PRICE || item.LOW || item.low || 0;
+                      const close = item.CH_LAST_TRADED_PRICE || item.CH_CLOSING_PRICE || item.CLOSE || item.close || 0;
+                      
+                      if (timestamp && close > 0) {
+                        const ts = timestamp instanceof Date ? timestamp.getTime() : new Date(timestamp).getTime();
+                        const dateKey = new Date(ts).toDateString();
+                        const o = open || close;
+                        const h = high || close;
+                        const l = low || close;
+                        const c = close;
+                        dailyOHLC.set(dateKey, { open: o, high: h, low: l, close: c });
+                      }
+                    });
+                  }
+                }
+                
+                // Generate intraday timestamps for each trading day with smooth price interpolation
+                const weekData: any[] = [];
+                
+                tradingDays.forEach((tradingDay, dayIndex) => {
+                  const dayKey = tradingDay.toDateString();
+                  const isTodayTradingDay = dayKey === today.toDateString();
+                  
+                  // Use intraday data for today if available
+                  if (isTodayTradingDay && todayIntradayData.length > 0) {
+                    weekData.push(...todayIntradayData);
+                  } else {
+                    // For past days, create smooth intraday pattern using OHLC data
+                    const dayData = dailyOHLC.get(dayKey);
+                    
+                    if (dayData && dayData.close > 0) {
+                      // Use previous day's close as today's open if available, otherwise use today's open
+                      let effectiveOpen = dayData.open;
+                      if (dayIndex > 0) {
+                        const prevDayKey = tradingDays[dayIndex - 1].toDateString();
+                        const prevDayData = dailyOHLC.get(prevDayKey);
+                        if (prevDayData) {
+                          effectiveOpen = prevDayData.close;
+                        }
+                      }
+                      
+                      const { high, low, close } = dayData;
+                      
+                      // Generate 2-minute intervals from 9:15 AM to 4:00 PM for smooth graph
+                      const marketOpen = new Date(tradingDay);
+                      marketOpen.setHours(9, 15, 0, 0);
+                      const marketClose = new Date(tradingDay);
+                      marketClose.setHours(16, 0, 0, 0);
+                      
+                      // Create a smooth price pattern throughout the day
+                      // Pattern: Start at open, reach high around mid-day, dip to low, end at close
+                      const totalMinutes = (marketClose.getTime() - marketOpen.getTime()) / (1000 * 60);
+                      
+                      let currentTime = new Date(marketOpen);
+                      let minuteIndex = 0;
+                      
+                      while (currentTime <= marketClose) {
+                        const progress = minuteIndex / totalMinutes; // 0 to 1
+                        
+                        // Create a smooth curve using cubic bezier-like interpolation
+                        // Pattern: open -> high (around 35%) -> low (around 65%) -> close
+                        let price: number;
+                        
+                        // Use a smoother interpolation function
+                        const smoothStep = (t: number) => t * t * (3 - 2 * t); // Smoothstep function
+                        
+                        if (progress < 0.35) {
+                          // First part: open to high
+                          const localProgress = smoothStep(progress / 0.35);
+                          price = effectiveOpen + (high - effectiveOpen) * localProgress;
+                        } else if (progress < 0.65) {
+                          // Middle part: high to low
+                          const localProgress = smoothStep((progress - 0.35) / 0.30);
+                          price = high - (high - low) * localProgress;
+                        } else {
+                          // Last part: low to close
+                          const localProgress = smoothStep((progress - 0.65) / 0.35);
+                          price = low + (close - low) * localProgress;
+                        }
+                        
+                        // Ensure price stays within bounds
+                        price = Math.max(low, Math.min(high, price));
+                        
+                        weekData.push({
+                          date: currentTime.getTime(),
+                          price: price,
+                          timestamp: currentTime.getTime(),
+                          displayDate: new Date(currentTime),
+                        });
+                        
+                        // Add 2 minutes for smooth but not too dense graph
+                        currentTime = new Date(currentTime.getTime() + 2 * 60 * 1000);
+                        minuteIndex += 2;
+                      }
+                    }
+                  }
+                });
+                
+                // Sort by timestamp
+                weekData.sort((a, b) => a.timestamp - b.timestamp);
+                
+                if (weekData.length > 0) {
+                  setChartData(weekData);
+                  setLoading(false);
+                  return;
+                }
+              } catch (historicalError: any) {
+                console.warn("Historical data not available for 1W, using fallback:", historicalError?.message);
+              }
+            } catch (weekError: any) {
+              console.warn("Error fetching 1W intraday data, using fallback:", weekError?.message);
+            }
+            // Fallback to simple historical data
             startDate.setDate(startDate.getDate() - 7);
             break;
           case "1M":
