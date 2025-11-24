@@ -33,7 +33,10 @@ async function graphqlRequest<T>(query: string, variables?: Record<string, any>)
       const text = await response.text().catch(() => "");
       // Don't throw for 500 errors, return empty data instead
       if (response.status >= 500) {
-        console.warn(`GraphQL server error (${response.status}): Backend may be unavailable`);
+        // Only log in development mode to reduce console noise
+        if (import.meta.env.DEV) {
+          console.warn(`GraphQL server error (${response.status}): Backend may be unavailable`);
+        }
         return {} as T;
       }
       throw new Error(`API ${response.status}: ${text || response.statusText}`);
@@ -43,8 +46,8 @@ async function graphqlRequest<T>(query: string, variables?: Record<string, any>)
     
     if (result.errors) {
       // Log but don't throw for GraphQL errors
-      // Only log if there are actual errors (not just empty result)
-      if (result.errors.length > 0 && result.errors[0].message) {
+      // Only log in development mode to reduce console noise
+      if (result.errors.length > 0 && result.errors[0].message && import.meta.env.DEV) {
         console.warn("GraphQL errors:", result.errors);
       }
       return {} as T;
@@ -53,7 +56,10 @@ async function graphqlRequest<T>(query: string, variables?: Record<string, any>)
     return result.data as T;
   } catch (error: any) {
     if (isNetworkError(error)) {
-      console.warn("Network error connecting to GraphQL API. Backend may be unavailable.");
+      // Only log in development mode
+      if (import.meta.env.DEV) {
+        console.warn("Network error connecting to GraphQL API. Backend may be unavailable.");
+      }
       return {} as T;
     }
     throw error;
@@ -248,16 +254,17 @@ export const api = {
         // For 404 and 400 errors, throw but allow caller to handle
         // For 500 errors, return null to indicate server error
         if (response.status >= 500) {
-          if (!options?.silent) {
+          // Only log in development mode when not silent
+          if (!options?.silent && import.meta.env.DEV) {
             console.warn(`API server error (${response.status}) for ${endpoint}: Backend may be unavailable`);
           }
           throw new Error(`API ${response.status}: Server error`);
         }
-        // For 400 errors, try to get more details but don't spam console
-        if (response.status === 400) {
-          // 400 errors might be due to invalid symbols or malformed requests
-          // Log only if not silent
-          if (!options?.silent) {
+        // For 400 errors, suppress logging when silent mode is enabled
+        // 400 errors might be due to invalid symbols, malformed requests, or backend validation
+        if (response.status === 400 && !options?.silent) {
+          // Only log in development mode to reduce production noise
+          if (import.meta.env.DEV) {
             console.debug(`API 400 error for ${endpoint}: ${text.substring(0, 100)}`);
           }
         }
@@ -274,7 +281,8 @@ export const api = {
       return response.json();
     } catch (error: any) {
       if (isNetworkError(error)) {
-        if (!options?.silent) {
+        // Only log in development mode when not silent
+        if (!options?.silent && import.meta.env.DEV) {
           console.warn(`Network error for ${endpoint}: Backend may be unavailable`);
         }
         throw new Error(`Network error: Unable to connect to backend`);
@@ -292,11 +300,9 @@ export const api = {
     try {
       return await api.fetchFromRest<any>(`/api/equity/${encodeURIComponent(symbol)}`, { silent: true });
     } catch (error: any) {
-      // Return null for errors instead of throwing
-      if (error?.message?.includes("Network error") || error?.message?.includes("API 400") || error?.message?.includes("API 500")) {
-        return null;
-      }
-      throw error;
+      // Return null for all errors - backend may be unavailable or symbol invalid
+      // This prevents console spam and allows graceful degradation
+      return null;
     }
   },
 
