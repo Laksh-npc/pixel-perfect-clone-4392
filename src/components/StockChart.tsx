@@ -614,42 +614,8 @@ const StockChart = ({ symbol }: StockChartProps) => {
 
   return (
     <div className="border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-[#1a1a1a] p-6 shadow-sm">
-      <div className="mb-4">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex gap-1.5 flex-wrap">
-            {timePeriods.map((period) => (
-              <Button
-                key={period.value}
-                variant="ghost"
-                size="sm"
-                onClick={() => setSelectedPeriod(period.value)}
-                className={`h-8 px-3 text-sm font-medium transition-all duration-200 ${
-                  selectedPeriod === period.value
-                    ? "bg-primary text-white hover:bg-primary/90 shadow-sm"
-                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
-                }`}
-              >
-                {period.label}
-              </Button>
-            ))}
-          </div>
-          <div className="flex gap-2">
-            <Button variant="ghost" size="sm" className="h-8 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200">
-              <BarChart3 className="w-4 h-4" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-8 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200"
-              onClick={() => navigate(`/terminal/${symbol}`)}
-            >
-              Terminal
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      <div className="h-96 relative">
+      {/* Chart Area - No top margin, starts immediately */}
+      <div className="h-96 relative mb-4">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart 
             data={chartData}
@@ -667,8 +633,7 @@ const StockChart = ({ symbol }: StockChartProps) => {
               type="number"
               scale="time"
               domain={['dataMin', 'dataMax']}
-              tick={selectedPeriod === "1D" ? { fontSize: 11, fill: "hsl(var(--muted-foreground))" } : { fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-              tickFormatter={(value) => formatXAxis(value, selectedPeriod)}
+              tick={false}
               axisLine={false}
             />
             <YAxis
@@ -693,6 +658,42 @@ const StockChart = ({ symbol }: StockChartProps) => {
             />
           </LineChart>
         </ResponsiveContainer>
+      </div>
+
+      {/* Time Range Buttons - Below chart, matching Groww exactly */}
+      <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-800">
+        <div className="flex gap-2 flex-wrap">
+          {timePeriods.map((period) => (
+            <Button
+              key={period.value}
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedPeriod(period.value)}
+              className={`h-8 px-3.5 text-sm font-medium rounded-full transition-all duration-200 ${
+                selectedPeriod === period.value
+                  ? "bg-gray-900 dark:bg-gray-700 text-white hover:bg-gray-800 dark:hover:bg-gray-600 shadow-sm border-0"
+                  : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+              }`}
+              style={{ fontSize: '14px' }}
+            >
+              {period.label}
+            </Button>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <Button variant="ghost" size="sm" className="h-8 px-3 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200">
+            <BarChart3 className="w-4 h-4" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-8 px-3 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200"
+            onClick={() => navigate(`/terminal/${symbol}`)}
+            style={{ fontSize: '14px' }}
+          >
+            Terminal
+          </Button>
+        </div>
       </div>
     </div>
   );

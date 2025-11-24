@@ -1253,19 +1253,7 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
               type="number"
               scale="time"
               domain={["dataMin", "dataMax"]}
-              tick={{ 
-                fontSize: 11, 
-                fill: textColor,
-                fontWeight: 400,
-                fontFamily: "system-ui, -apple-system, sans-serif"
-              }}
-              tickFormatter={(value) => {
-                try {
-                  return format(new Date(value), selectedPeriod === "1d" || selectedPeriod === "5d" ? "HH:mm" : selectedPeriod === "1m" || selectedPeriod === "3m" ? "MMM dd" : "MMM yyyy");
-                } catch {
-                  return "";
-                }
-              }}
+              tick={false}
               axisLine={false}
             />
             <YAxis

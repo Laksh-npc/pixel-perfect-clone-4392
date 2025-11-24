@@ -25,36 +25,95 @@ const SearchModal = ({ open, onOpenChange }: SearchModalProps) => {
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Load recent searches from localStorage
+  // Popular stocks that are available via API - default history
+  const DEFAULT_POPULAR_STOCKS = [
+    { symbol: "ITC", companyName: "ITC Ltd." },
+    { symbol: "TCS", companyName: "Tata Consultancy Services Ltd." },
+    { symbol: "RELIANCE", companyName: "Reliance Industries Ltd." },
+    { symbol: "TATAMOTORS", companyName: "Tata Motors Ltd." },
+  ];
+
+  // Load recent searches from localStorage and initialize with popular stocks if empty
   useEffect(() => {
-    const saved = localStorage.getItem("recentSearches");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        // Handle both old format (string[]) and new format (object[])
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          if (typeof parsed[0] === 'string') {
-            // Old format - convert to new format
-            setRecentSearches([]);
-          } else {
-            setRecentSearches(parsed);
+    const loadHistory = async () => {
+      const saved = localStorage.getItem("recentSearches");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          // Handle both old format (string[]) and new format (object[])
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            if (typeof parsed[0] === 'string') {
+              // Old format - convert to new format
+              setRecentSearches([]);
+            } else {
+              // Verify stocks are still available via API
+              const verified: Array<{ symbol: string; companyName: string }> = [];
+              for (const item of parsed) {
+                try {
+                  const details = await api.getStockDetails(item.symbol);
+                  if (details?.info?.companyName) {
+                    verified.push({
+                      symbol: item.symbol,
+                      companyName: details.info.companyName
+                    });
+                  }
+                } catch (e) {
+                  // Skip if stock is not available
+                }
+              }
+              setRecentSearches(verified);
+              if (verified.length > 0) {
+                localStorage.setItem("recentSearches", JSON.stringify(verified));
+              }
+            }
+          }
+        } catch (e) {
+          setRecentSearches([]);
+        }
+      }
+      
+      // If no history exists, initialize with popular stocks that are available via API
+      if (!saved || (saved && JSON.parse(saved).length === 0)) {
+        const availableStocks: Array<{ symbol: string; companyName: string }> = [];
+        
+        for (const stock of DEFAULT_POPULAR_STOCKS) {
+          try {
+            const details = await api.getStockDetails(stock.symbol);
+            if (details?.info?.companyName) {
+              availableStocks.push({
+                symbol: stock.symbol,
+                companyName: details.info.companyName
+              });
+            } else {
+              // Use fallback name if API doesn't return company name
+              availableStocks.push(stock);
+            }
+          } catch (e) {
+            // Skip if stock is not available via API
           }
         }
-      } catch (e) {
-        setRecentSearches([]);
+        
+        if (availableStocks.length > 0) {
+          setRecentSearches(availableStocks);
+          localStorage.setItem("recentSearches", JSON.stringify(availableStocks));
+        }
       }
-    }
+    };
+    
+    loadHistory();
   }, []);
 
-  // Load popular stocks
+  // Load popular stocks - only show those available via API
   useEffect(() => {
     const loadPopularStocks = async () => {
-      // Popular stocks from screenshot
+      // Popular stocks that are commonly available
       const popularSymbols = [
-        { symbol: "BILLIONBRAINS", name: "Billionbrains Garage Ventures Ltd." },
-        { symbol: "PHYSICSWALLAH", name: "Physicswallah Ltd." },
-        { symbol: "TENNECO", name: "Tenneco Clean Air India Ltd." },
-        { symbol: "JAIPRAKPOW", name: "Jaiprakash Power Ventures Ltd." }
+        { symbol: "ITC", name: "ITC Ltd." },
+        { symbol: "TCS", name: "Tata Consultancy Services Ltd." },
+        { symbol: "RELIANCE", name: "Reliance Industries Ltd." },
+        { symbol: "TATAMOTORS", name: "Tata Motors Ltd." },
+        { symbol: "INFY", name: "Infosys Ltd." },
+        { symbol: "HDFCBANK", name: "HDFC Bank Ltd." },
       ];
       
       const results: SearchResult[] = [];
@@ -63,25 +122,15 @@ const SearchModal = ({ open, onOpenChange }: SearchModalProps) => {
         try {
           const details = await api.getStockDetails(stock.symbol);
           if (details?.info?.companyName) {
+            // Only add if stock is available via API
             results.push({
               symbol: stock.symbol,
               companyName: details.info.companyName,
               type: "stock"
             });
-          } else {
-            results.push({
-              symbol: stock.symbol,
-              companyName: stock.name,
-              type: "stock"
-            });
           }
         } catch (e) {
-          // Use fallback name if API fails
-          results.push({
-            symbol: stock.symbol,
-            companyName: stock.name,
-            type: "stock"
-          });
+          // Skip if API fails - don't add to popular stocks
         }
       }
       
@@ -118,14 +167,23 @@ const SearchModal = ({ open, onOpenChange }: SearchModalProps) => {
     return () => clearTimeout(debounceTimer);
   }, [searchQuery]);
 
-  const handleResultClick = (result: SearchResult) => {
-    // Save to recent searches
-    const updated = [
-      { symbol: result.symbol, companyName: result.companyName },
-      ...recentSearches.filter(s => s.symbol !== result.symbol)
-    ].slice(0, 5);
-    setRecentSearches(updated);
-    localStorage.setItem("recentSearches", JSON.stringify(updated));
+  const handleResultClick = async (result: SearchResult) => {
+    // Verify stock is available via API before adding to history
+    try {
+      const details = await api.getStockDetails(result.symbol);
+      if (details?.info?.companyName) {
+        // Save to recent searches - only if stock is available
+        const updated = [
+          { symbol: result.symbol, companyName: details.info.companyName },
+          ...recentSearches.filter(s => s.symbol !== result.symbol)
+        ].slice(0, 5);
+        setRecentSearches(updated);
+        localStorage.setItem("recentSearches", JSON.stringify(updated));
+      }
+    } catch (e) {
+      // If stock is not available, don't add to history but still navigate
+      console.warn(`Stock ${result.symbol} not available via API`);
+    }
     
     // Navigate to stock detail
     navigate(`/stock/${result.symbol}`);
@@ -133,7 +191,25 @@ const SearchModal = ({ open, onOpenChange }: SearchModalProps) => {
     setSearchQuery("");
   };
 
-  const handleRecentSearchClick = (item: { symbol: string; companyName: string }) => {
+  const handleRecentSearchClick = async (item: { symbol: string; companyName: string }) => {
+    // Verify stock is still available before navigating
+    try {
+      const details = await api.getStockDetails(item.symbol);
+      if (!details?.info?.companyName) {
+        // Remove from history if not available
+        const updated = recentSearches.filter(s => s.symbol !== item.symbol);
+        setRecentSearches(updated);
+        localStorage.setItem("recentSearches", JSON.stringify(updated));
+        return;
+      }
+    } catch (e) {
+      // Remove from history if API fails
+      const updated = recentSearches.filter(s => s.symbol !== item.symbol);
+      setRecentSearches(updated);
+      localStorage.setItem("recentSearches", JSON.stringify(updated));
+      return;
+    }
+    
     navigate(`/stock/${item.symbol}`);
     onOpenChange(false);
     setSearchQuery("");
@@ -243,9 +319,10 @@ const SearchModal = ({ open, onOpenChange }: SearchModalProps) => {
         <div className="max-h-[500px] overflow-y-auto">
           {!searchQuery ? (
             <>
-              {/* Recent Searches */}
+              {/* Recent Searches / History */}
               {recentSearches.length > 0 && (
-                <div className="px-4 py-2">
+                <div className="px-4 py-3">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-2 px-3">History</h3>
                   {recentSearches.map((item) => (
                     <button
                       key={item.symbol}
@@ -253,7 +330,10 @@ const SearchModal = ({ open, onOpenChange }: SearchModalProps) => {
                       className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 rounded-md text-left transition-colors"
                     >
                       <RotateCcw className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                      <span className="text-sm text-gray-700">{item.companyName}</span>
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-gray-900">{item.companyName}</div>
+                        <div className="text-xs text-gray-500">{item.symbol}</div>
+                      </div>
                     </button>
                   ))}
                 </div>

@@ -27,6 +27,7 @@ const TradingWidget = ({ symbol, companyName, priceInfo, tradeInfo }: TradingWid
   const [price, setPrice] = useState(priceInfo?.lastPrice?.toFixed(2) || "0");
   const [buyDialogOpen, setBuyDialogOpen] = useState(false);
   const [sellDialogOpen, setSellDialogOpen] = useState(false);
+  const [exchange, setExchange] = useState<"NSE" | "BSE">("NSE");
 
   // Calculate MTF multiplier (typically varies by stock, using a default calculation)
   const calculateMTFMultiplier = () => {
@@ -78,49 +79,57 @@ const TradingWidget = ({ symbol, companyName, priceInfo, tradeInfo }: TradingWid
 
   return (
     <Card className="border border-gray-200 dark:border-gray-800 shadow-sm bg-white dark:bg-[#1a1a1a] rounded-lg">
-      <CardHeader className="pb-2 px-4 pt-4">
-        <CardTitle className="text-base font-semibold text-gray-900 dark:text-white">{companyName}</CardTitle>
-        <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-          NSE ₹{currentPrice.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className={percentChange >= 0 ? "text-green-600 dark:text-green-500" : "text-red-600 dark:text-red-500"}>({percentChange >= 0 ? "+" : ""}{percentChange.toFixed(2)}%)</span> · BSE ₹{bsePrice.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-primary hover:underline cursor-pointer ml-1">Depth</span>
+      <CardHeader className="pb-4 px-5 pt-5">
+        <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white mb-2" style={{ fontSize: '18px', fontWeight: 600, lineHeight: '1.4' }}>
+          {companyName}
+        </CardTitle>
+        <div className="text-sm text-gray-900 dark:text-white leading-relaxed" style={{ fontSize: '14px' }}>
+          NSE ₹{currentPrice.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 
+          <span className={percentChange >= 0 ? "text-[#22C55E] dark:text-[#00C46A]" : "text-[#EF4444] dark:text-[#FF5F5F]"}>({percentChange >= 0 ? "+" : ""}{percentChange.toFixed(2)}%)</span> · 
+          BSE ₹{bsePrice.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 
+          <span className="text-[#22C55E] dark:text-[#00C46A] hover:underline cursor-pointer ml-1">Depth</span>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4 pt-0 px-4 pb-4">
+      <CardContent className="space-y-5 pt-0 px-5 pb-5">
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "BUY" | "SELL")}>
-          <TabsList className="grid w-full grid-cols-2 h-10 bg-transparent p-0 gap-0 border-b border-gray-200 dark:border-gray-800 rounded-none">
+          <TabsList className="grid w-full grid-cols-2 h-11 bg-transparent p-0 gap-0 border-b border-gray-200 dark:border-gray-800 rounded-none">
             <TabsTrigger 
               value="BUY" 
-              className={`rounded-none border-b-2 transition-all h-10 px-4 text-sm font-medium ${
+              className={`rounded-none border-b-2 transition-all h-11 px-4 text-sm font-semibold ${
                 activeTab === "BUY" 
-                  ? "border-green-500 text-green-600 dark:text-green-500 bg-transparent shadow-none" 
-                  : "border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                  ? "border-[#22C55E] dark:border-[#00C46A] text-[#22C55E] dark:text-[#00C46A] bg-transparent shadow-none" 
+                  : "border-transparent text-gray-500 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
               }`}
+              style={{ fontSize: '14px', fontWeight: 600 }}
             >
               BUY
             </TabsTrigger>
             <TabsTrigger 
               value="SELL" 
-              className={`rounded-none border-b-2 transition-all h-10 px-4 text-sm font-medium ${
+              className={`rounded-none border-b-2 transition-all h-11 px-4 text-sm font-semibold ${
                 activeTab === "SELL" 
-                  ? "border-orange-500 text-orange-600 dark:text-orange-500 bg-transparent shadow-none" 
-                  : "border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                  ? "border-[#FF7043] text-[#FF7043] dark:text-[#FF7043] bg-transparent shadow-none" 
+                  : "border-transparent text-gray-500 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
               }`}
+              style={{ fontSize: '14px', fontWeight: 600 }}
             >
               SELL
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value={activeTab} className="space-y-4 mt-4">
-            {/* Order Type Selection - Match Groww style */}
-            <div className="flex gap-2">
+          <TabsContent value={activeTab} className="space-y-5 mt-6">
+            {/* Order Type Selection - Match Groww exactly */}
+            <div className="flex gap-2 items-center">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setOrderType("Delivery")}
-                className={`flex-1 h-9 text-sm font-normal border-gray-300 dark:border-gray-700 rounded-md transition-all duration-200 ${
+                className={`flex-1 h-9 text-sm font-medium border-gray-300 dark:border-gray-700 rounded-md transition-all duration-200 ${
                   orderType === "Delivery" 
                     ? "bg-gray-900 dark:bg-gray-700 text-white border-gray-900 dark:border-gray-700 hover:bg-gray-800 dark:hover:bg-gray-600" 
                     : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border-gray-300 dark:border-gray-700"
                 }`}
+                style={{ fontSize: '14px' }}
               >
                 Delivery
               </Button>
@@ -128,11 +137,12 @@ const TradingWidget = ({ symbol, companyName, priceInfo, tradeInfo }: TradingWid
                 variant="outline"
                 size="sm"
                 onClick={() => setOrderType("Intraday")}
-                className={`flex-1 h-9 text-sm font-normal border-gray-300 dark:border-gray-700 rounded-md transition-all duration-200 ${
+                className={`flex-1 h-9 text-sm font-medium border-gray-300 dark:border-gray-700 rounded-md transition-all duration-200 ${
                   orderType === "Intraday" 
                     ? "bg-gray-900 dark:bg-gray-700 text-white border-gray-900 dark:border-gray-700 hover:bg-gray-800 dark:hover:bg-gray-600" 
                     : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border-gray-300 dark:border-gray-700"
                 }`}
+                style={{ fontSize: '14px' }}
               >
                 Intraday
               </Button>
@@ -140,25 +150,28 @@ const TradingWidget = ({ symbol, companyName, priceInfo, tradeInfo }: TradingWid
                 variant="outline"
                 size="sm"
                 onClick={() => setOrderType("MTF")}
-                className={`flex-1 h-9 text-sm font-normal border-gray-300 dark:border-gray-700 rounded-md transition-all duration-200 relative ${
+                className={`flex-1 h-9 text-sm font-medium border-gray-300 dark:border-gray-700 rounded-md transition-all duration-200 relative ${
                   orderType === "MTF" 
                     ? "bg-gray-900 dark:bg-gray-700 text-white border-gray-900 dark:border-gray-700 hover:bg-gray-800 dark:hover:bg-gray-600" 
                     : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border-gray-300 dark:border-gray-700"
                 }`}
+                style={{ fontSize: '14px' }}
               >
                 MTF {mtfMultiplier}x
-                <Settings className="w-3 h-3 ml-1.5" />
+                <Settings className="w-3.5 h-3.5 ml-1.5 text-gray-500 dark:text-gray-400" />
               </Button>
             </div>
 
-            {/* Quantity Input */}
+            {/* Quantity Input - Match Groww exactly */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="quantity" className="text-xs text-gray-600 dark:text-gray-400 font-normal">Qty NSE</Label>
-                <Select defaultValue="NSE">
-                  <SelectTrigger className="h-5 w-auto text-xs border-none shadow-none p-0 hover:bg-transparent focus:ring-0">
+                <Label htmlFor="quantity" className="text-sm text-gray-700 dark:text-gray-300 font-normal" style={{ fontSize: '14px' }}>
+                  Qty {exchange}
+                </Label>
+                <Select value={exchange} onValueChange={(v) => setExchange(v as "NSE" | "BSE")}>
+                  <SelectTrigger className="h-5 w-auto text-sm border-none shadow-none p-0 hover:bg-transparent focus:ring-0 bg-transparent">
                     <SelectValue />
-                    <ChevronDown className="h-3 w-3 text-gray-500 dark:text-gray-400" />
+                    <ChevronDown className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400 ml-1" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="BSE">BSE</SelectItem>
@@ -169,21 +182,24 @@ const TradingWidget = ({ symbol, companyName, priceInfo, tradeInfo }: TradingWid
               <Input
                 id="quantity"
                 type="number"
-                placeholder="Enter quantity"
+                placeholder=""
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
-                className="w-full h-10 border-gray-300 dark:border-gray-700 focus:border-gray-400 dark:focus:border-gray-600 focus:ring-1 focus:ring-gray-400 dark:focus:ring-gray-600 text-sm bg-background dark:bg-gray-800 text-foreground dark:text-white"
+                className="w-full h-11 border-gray-300 dark:border-gray-700 focus:border-gray-400 dark:focus:border-gray-600 focus:ring-1 focus:ring-gray-400 dark:focus:ring-gray-600 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-md"
+                style={{ fontSize: '14px' }}
               />
             </div>
 
-            {/* Price Input */}
+            {/* Price Input - Match Groww exactly */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="price" className="text-xs text-gray-600 dark:text-gray-400 font-normal">Price Limit</Label>
+                <Label htmlFor="price" className="text-sm text-gray-700 dark:text-gray-300 font-normal" style={{ fontSize: '14px' }}>
+                  Price Limit
+                </Label>
                 <Select value={priceType} onValueChange={(v) => setPriceType(v as "Market" | "Limit")}>
-                  <SelectTrigger className="h-5 w-auto text-xs border-none shadow-none p-0 hover:bg-transparent focus:ring-0">
+                  <SelectTrigger className="h-5 w-auto text-sm border-none shadow-none p-0 hover:bg-transparent focus:ring-0 bg-transparent">
                     <SelectValue />
-                    <ChevronDown className="h-3 w-3 text-gray-500 dark:text-gray-400" />
+                    <ChevronDown className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400 ml-1" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Market">Market</SelectItem>
@@ -192,7 +208,7 @@ const TradingWidget = ({ symbol, companyName, priceInfo, tradeInfo }: TradingWid
                 </Select>
               </div>
               {priceType === "Market" ? (
-                <div className="w-full h-10 px-3 border border-gray-300 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-800 flex items-center text-sm text-gray-600 dark:text-gray-400">
+                <div className="w-full h-11 px-3 border border-gray-300 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-800 flex items-center text-sm text-gray-600 dark:text-gray-400" style={{ fontSize: '14px' }}>
                   At market
                 </div>
               ) : (
@@ -200,10 +216,11 @@ const TradingWidget = ({ symbol, companyName, priceInfo, tradeInfo }: TradingWid
                   id="price"
                   type="number"
                   step="0.01"
-                  placeholder="Enter price"
+                  placeholder=""
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
-                  className="w-full h-10 border-gray-300 dark:border-gray-700 focus:border-gray-400 dark:focus:border-gray-600 focus:ring-1 focus:ring-gray-400 dark:focus:ring-gray-600 text-sm bg-background dark:bg-gray-800 text-foreground dark:text-white"
+                  className="w-full h-11 border-gray-300 dark:border-gray-700 focus:border-gray-400 dark:focus:border-gray-600 focus:ring-1 focus:ring-gray-400 dark:focus:ring-gray-600 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-md"
+                  style={{ fontSize: '14px' }}
                 />
               )}
             </div>
@@ -218,33 +235,36 @@ const TradingWidget = ({ symbol, companyName, priceInfo, tradeInfo }: TradingWid
               </div>
             )}
 
-            {/* Balance and Requirement - Match Groww style */}
-            <div className="space-y-2.5 pt-2 border-t border-gray-200 dark:border-gray-800">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-gray-400">Balance:</span>
+            {/* Balance and Requirement - Match Groww exactly */}
+            <div className="space-y-3 pt-3 border-t border-gray-200 dark:border-gray-800">
+              <div className="flex justify-between items-center" style={{ fontSize: '14px' }}>
+                <span className="text-gray-600 dark:text-gray-400" style={{ fontSize: '14px' }}>Balance:</span>
                 <VisibilityValue 
                   value={`₹${balance.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                   className="font-medium text-gray-900 dark:text-white"
+                  style={{ fontSize: '14px', fontWeight: 500 }}
                 />
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-gray-400">Approx req.:</span>
+              <div className="flex justify-between items-center" style={{ fontSize: '14px' }}>
+                <span className="text-gray-600 dark:text-gray-400" style={{ fontSize: '14px' }}>Approx req.:</span>
                 <VisibilityValue 
                   value={`₹${formattedApproximateRequired}`}
                   className="font-medium text-gray-900 dark:text-white"
+                  style={{ fontSize: '14px', fontWeight: 500 }}
                 />
               </div>
             </div>
 
-            {/* Buy/Sell Button - Match Groww style */}
+            {/* Buy/Sell Button - Match Groww exactly */}
             <Button
               className={`w-full h-12 text-base font-semibold rounded-md transition-all duration-200 ${
                 activeTab === "BUY" 
-                  ? "bg-green-500 hover:bg-green-600 text-white shadow-sm hover:shadow-md" 
-                  : "bg-orange-500 hover:bg-orange-600 text-white shadow-sm hover:shadow-md"
+                  ? "bg-[#22C55E] hover:bg-[#16a34a] dark:bg-[#00C46A] dark:hover:bg-[#00a855] text-white shadow-sm hover:shadow-md" 
+                  : "bg-[#FF7043] hover:bg-[#FF5722] dark:bg-[#FF7043] dark:hover:bg-[#FF5722] text-white shadow-sm hover:shadow-md"
               }`}
               onClick={activeTab === "BUY" ? handleBuy : handleSell}
               size="lg"
+              style={{ fontSize: '16px', fontWeight: 600 }}
             >
               {activeTab === "BUY" ? "Buy" : "Sell"}
             </Button>
