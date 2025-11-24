@@ -16,6 +16,7 @@ import SimilarStocks from "@/components/SimilarStocks";
 import Financials from "@/components/Financials";
 import AboutCompany from "@/components/AboutCompany";
 import CreateAlertDialog from "@/components/CreateAlertDialog";
+import WatchlistDialog from "@/components/WatchlistDialog";
 
 const StockDetail = () => {
   const { symbol } = useParams<{ symbol: string }>();
@@ -26,6 +27,7 @@ const StockDetail = () => {
   const [corporateInfo, setCorporateInfo] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [alertDialogOpen, setAlertDialogOpen] = useState(false);
+  const [watchlistDialogOpen, setWatchlistDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!symbol) {
@@ -146,6 +148,7 @@ const StockDetail = () => {
               <Button 
                 variant="outline" 
                 size="sm"
+                onClick={() => setWatchlistDialogOpen(true)}
                 className="h-9 px-4 border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-gray-400 dark:hover:border-gray-600 transition-all duration-200 text-gray-700 dark:text-gray-300"
               >
                 <Bookmark className="w-4 h-4 mr-2" />
@@ -261,6 +264,13 @@ const StockDetail = () => {
         onOpenChange={setAlertDialogOpen}
         symbol={symbol}
         currentPrice={currentPrice}
+      />
+
+      <WatchlistDialog
+        open={watchlistDialogOpen}
+        onOpenChange={setWatchlistDialogOpen}
+        symbol={symbol}
+        companyName={info.companyName}
       />
 
       <Footer />

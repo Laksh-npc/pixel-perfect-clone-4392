@@ -17,6 +17,7 @@ import Balance from "./pages/Balance";
 import IPO from "./pages/IPO";
 import Bonds from "./pages/Bonds";
 import ETFScreener from "./pages/ETFScreener";
+import Watchlist from "./pages/Watchlist";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -80,6 +81,7 @@ const App = () => (
                 <Route path="/ipo" element={<IPO />} />
                 <Route path="/bonds" element={<Bonds />} />
                 <Route path="/etf-screener" element={<ETFScreener />} />
+                <Route path="/watchlist" element={<Watchlist />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
