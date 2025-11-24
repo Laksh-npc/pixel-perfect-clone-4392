@@ -7,9 +7,11 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           <div className="col-span-1">
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary via-cyan-400 to-blue-500 flex items-center justify-center">
-                <div className="w-5 h-5 bg-background rounded-full"></div>
-              </div>
+              <img 
+                src="/groww-logo.svg" 
+                alt="Groww" 
+                className="w-10 h-10 flex-shrink-0 rounded-full"
+              />
               <span className="text-xl font-semibold">Groww</span>
             </div>
             <div className="text-sm text-muted-foreground space-y-1 mb-6">

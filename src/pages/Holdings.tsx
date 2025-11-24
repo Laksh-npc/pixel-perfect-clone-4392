@@ -5,7 +5,7 @@ import Footer from "@/components/Footer";
 import HoldingsView from "@/components/HoldingsView";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Eye } from "lucide-react";
+import { Eye, Wallet } from "lucide-react";
 import { useBalance } from "@/hooks/useBalance";
 import { useVisibility, VisibilityValue } from "@/hooks/useVisibility";
 import AddMoneyDialog from "@/components/AddMoneyDialog";
@@ -45,35 +45,45 @@ const Holdings = () => {
           <div className="lg:sticky lg:top-4 h-fit">
             <Card className="border border-gray-200 dark:border-gray-800 shadow-sm bg-white dark:bg-[#1a1a1a] rounded-lg overflow-hidden">
               <CardContent className="p-0">
-                {/* Green bar with cursor icon - Match Groww */}
-                <div className="bg-green-50 dark:bg-green-900/10 border-b border-green-200 dark:border-green-800/30 px-4 py-3 flex items-center gap-2">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-green-600 dark:text-green-500 flex-shrink-0">
-                    <path d="M2 2L2 10L6 6L8 8L12 4L12 2L2 2Z" fill="currentColor"/>
-                    <path d="M12 4L8 8L10 10L14 6L14 4L12 4Z" fill="currentColor" fillOpacity="0.6"/>
-                    <path d="M14 6L10 10L12 12L16 8L16 6L14 6Z" fill="currentColor"/>
-                  </svg>
-                  <p className="text-sm text-gray-700 dark:text-gray-300 font-medium" style={{ fontSize: '14px', fontWeight: 500 }}>Select a stock to get started</p>
+                {/* Green bar - Match Groww exactly */}
+                <div className="px-4 pt-4 pb-3">
+                  {/* Horizontal green bar - 8-10px high, rounded ends */}
+                  <div className="mb-3">
+                    <div className="h-2.5 bg-[#22C55E] dark:bg-[#00C46A] rounded-full w-full"></div>
+                  </div>
+                  {/* Centered text below the green bar - medium grey */}
+                  <p className="text-center text-sm text-gray-600 dark:text-gray-400 mt-3" style={{ fontSize: '14px', fontWeight: 400 }}>
+                    Select a stock to get started
+                  </p>
                 </div>
                 
-                {/* Balance Section - Match Groww */}
+                {/* Dashed separator line */}
+                <div className="border-t border-dashed border-gray-200 dark:border-gray-700 mx-4"></div>
+                
+                {/* Balance Section - Match Groww exactly */}
                 <div className="px-4 py-4">
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="text-sm text-gray-600 dark:text-gray-400" style={{ fontSize: '14px' }}>Balance:</span>
-                    <VisibilityValue 
-                      value={`₹${balance.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                      className="text-sm font-semibold text-gray-900 dark:text-white"
-                      style={{ fontSize: '14px', fontWeight: 600 }}
-                    />
+                  <div className="flex justify-between items-center">
+                    {/* Left side: Wallet icon (dark) + Balance: (lighter gray) + amount (darker gray) */}
+                    <div className="flex items-center gap-2">
+                      <Wallet className="w-4 h-4 text-gray-900 dark:text-gray-100 flex-shrink-0" />
+                      <span className="text-sm text-gray-500 dark:text-gray-400" style={{ fontSize: '14px' }}>
+                        Balance:
+                      </span>
+                      <VisibilityValue 
+                        value={`₹${balance.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                        className="text-sm text-gray-900 dark:text-gray-100"
+                        style={{ fontSize: '14px', fontWeight: 400 }}
+                      />
+                    </div>
+                    {/* Right side: Add money with dashed underline - darker gray/black */}
+                    <button
+                      onClick={() => setAddMoneyOpen(true)}
+                      className="text-sm text-gray-900 dark:text-gray-100 hover:text-gray-700 dark:hover:text-gray-300 underline decoration-dashed underline-offset-2 cursor-pointer transition-colors"
+                      style={{ fontSize: '14px', fontWeight: 400 }}
+                    >
+                      Add money
+                    </button>
                   </div>
-                  <Button 
-                    variant="outline"
-                    size="sm"
-                    className="w-full h-9 text-sm font-medium border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
-                    onClick={() => setAddMoneyOpen(true)}
-                    style={{ fontSize: '14px', fontWeight: 500 }}
-                  >
-                    Add money
-                  </Button>
                 </div>
               </CardContent>
             </Card>

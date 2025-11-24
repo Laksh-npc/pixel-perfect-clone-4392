@@ -124,9 +124,9 @@ const TradingWidget = ({ symbol, companyName, priceInfo, tradeInfo }: TradingWid
                 variant="outline"
                 size="sm"
                 onClick={() => setOrderType("Delivery")}
-                className={`flex-1 h-9 text-sm font-medium border-gray-300 dark:border-gray-700 rounded-md transition-all duration-200 ${
+                className={`flex-1 h-9 text-sm font-medium border-gray-300 dark:border-gray-700 rounded-full transition-all duration-200 ${
                   orderType === "Delivery" 
-                    ? "bg-gray-900 dark:bg-gray-700 text-white border-gray-900 dark:border-gray-700 hover:bg-gray-800 dark:hover:bg-gray-600" 
+                    ? "bg-gray-200 dark:bg-gray-700 text-black dark:text-white border-gray-300 dark:border-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600" 
                     : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border-gray-300 dark:border-gray-700"
                 }`}
                 style={{ fontSize: '14px' }}
@@ -137,9 +137,9 @@ const TradingWidget = ({ symbol, companyName, priceInfo, tradeInfo }: TradingWid
                 variant="outline"
                 size="sm"
                 onClick={() => setOrderType("Intraday")}
-                className={`flex-1 h-9 text-sm font-medium border-gray-300 dark:border-gray-700 rounded-md transition-all duration-200 ${
+                className={`flex-1 h-9 text-sm font-medium border-gray-300 dark:border-gray-700 rounded-full transition-all duration-200 ${
                   orderType === "Intraday" 
-                    ? "bg-gray-900 dark:bg-gray-700 text-white border-gray-900 dark:border-gray-700 hover:bg-gray-800 dark:hover:bg-gray-600" 
+                    ? "bg-gray-200 dark:bg-gray-700 text-black dark:text-white border-gray-300 dark:border-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600" 
                     : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border-gray-300 dark:border-gray-700"
                 }`}
                 style={{ fontSize: '14px' }}
@@ -150,9 +150,9 @@ const TradingWidget = ({ symbol, companyName, priceInfo, tradeInfo }: TradingWid
                 variant="outline"
                 size="sm"
                 onClick={() => setOrderType("MTF")}
-                className={`flex-1 h-9 text-sm font-medium border-gray-300 dark:border-gray-700 rounded-md transition-all duration-200 relative ${
+                className={`flex-1 h-9 text-sm font-medium border-gray-300 dark:border-gray-700 rounded-full transition-all duration-200 relative ${
                   orderType === "MTF" 
-                    ? "bg-gray-900 dark:bg-gray-700 text-white border-gray-900 dark:border-gray-700 hover:bg-gray-800 dark:hover:bg-gray-600" 
+                    ? "bg-gray-200 dark:bg-gray-700 text-black dark:text-white border-gray-300 dark:border-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600" 
                     : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border-gray-300 dark:border-gray-700"
                 }`}
                 style={{ fontSize: '14px' }}
