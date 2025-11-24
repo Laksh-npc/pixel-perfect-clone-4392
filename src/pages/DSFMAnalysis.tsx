@@ -10,7 +10,6 @@ import TimeRangeSelector, { TimeRange } from "@/components/dsfm/TimeRangeSelecto
 import CorrelationNetworkGraph from "@/components/dsfm/CorrelationNetworkGraph";
 import CentralityTable from "@/components/dsfm/CentralityTable";
 import BCStepByStep from "@/components/dsfm/bcSteps/BCStepByStep";
-import Step8MarketInterpretation from "@/components/dsfm/bcSteps/Step8MarketInterpretation";
 import ShockSimulator from "@/components/dsfm/ShockSimulator";
 import HybridForecast from "@/components/dsfm/HybridForecast";
 
@@ -337,17 +336,6 @@ const DSFMAnalysis = () => {
                     selectedNodeId={selectedNodeId}
                   />
                 </>
-              )}
-
-              {/* Market Interpretation */}
-              {networkGraph && correlationMatrix && (
-                <div className="mt-6">
-                  <Step8MarketInterpretation 
-                    networkGraph={networkGraph}
-                    correlationMatrix={correlationMatrix}
-                    loading={loading} 
-                  />
-                </div>
               )}
             </TabsContent>
 
