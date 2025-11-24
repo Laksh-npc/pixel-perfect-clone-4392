@@ -2,17 +2,17 @@ import { useState, useEffect, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Components
 import TimeRangeSelector, { TimeRange } from "@/components/dsfm/TimeRangeSelector";
-import ModeToggle, { AnalysisMode } from "@/components/dsfm/ModeToggle";
 import CorrelationNetworkGraph from "@/components/dsfm/CorrelationNetworkGraph";
 import CentralityTable from "@/components/dsfm/CentralityTable";
+import BCStepByStep from "@/components/dsfm/bcSteps/BCStepByStep";
+import Step8MarketInterpretation from "@/components/dsfm/bcSteps/Step8MarketInterpretation";
 import ShockSimulator from "@/components/dsfm/ShockSimulator";
-import Insights from "@/components/dsfm/Insights";
-import DataValidation from "@/components/dsfm/DataValidation";
+import HybridForecast from "@/components/dsfm/HybridForecast";
 
 // Services
 import {
@@ -23,35 +23,37 @@ import {
   SECTOR_INDICES
 } from "@/services/dsfm/dataFetcher";
 import { buildCorrelationMatrix } from "@/services/dsfm/correlationEngine";
-import { buildNetworkGraph, getTopBridgeNodes } from "@/services/dsfm/networkEngine";
-import { simulateShock } from "@/services/dsfm/shockEngine";
+import { buildNetworkGraph } from "@/services/dsfm/networkEngine";
 import { StockData } from "@/services/dsfm/dataFetcher";
 import { CorrelationMatrix } from "@/services/dsfm/correlationEngine";
 import { NetworkGraph } from "@/services/dsfm/networkEngine";
-import { ShockSimulation } from "@/services/dsfm/shockEngine";
 
 // Sector mapping
 import sectorMapping from "@/lib/sector_mapping.json";
 
 const DSFMAnalysis = () => {
-  const [mode, setMode] = useState<AnalysisMode>("stock");
   const [timeRange, setTimeRange] = useState<TimeRange>("1Y");
   const [customStartDate, setCustomStartDate] = useState<Date | undefined>();
   const [customEndDate, setCustomEndDate] = useState<Date | undefined>();
   
+  // Fixed to stock-level and threshold mode
+  const [threshold, setThreshold] = useState(0.5);
+  
+  // Node selection for bridge path viewer
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  
   const [stockData, setStockData] = useState<StockData[]>([]);
   const [correlationMatrix, setCorrelationMatrix] = useState<CorrelationMatrix | null>(null);
   const [networkGraph, setNetworkGraph] = useState<NetworkGraph | null>(null);
-  const [shockSimulation, setShockSimulation] = useState<ShockSimulation | null>(null);
   
   const [loading, setLoading] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState({ loaded: 0, total: 0 });
   const [activeTab, setActiveTab] = useState("overview");
 
-  // Get symbols based on mode
+  // Always use stock-level
   const symbols = useMemo(() => {
-    return mode === "stock" ? NIFTY50_TICKERS : SECTOR_INDICES;
-  }, [mode]);
+    return NIFTY50_TICKERS;
+  }, []);
 
   // Create sector map
   const sectorMap = useMemo(() => {
@@ -77,7 +79,7 @@ const DSFMAnalysis = () => {
       setLoadingProgress({ loaded: 0, total: symbols.length });
       
       try {
-        console.log(`Loading ${mode === "stock" ? "stock-level" : "sector-level"} data for ${timeRange} period`);
+        console.log(`Loading stock-level data for ${timeRange} period`);
         console.log(`Date range: ${formatDate(dateRange.start)} to ${formatDate(dateRange.end)}`);
         
         const data = await fetchMultipleStocks(
@@ -89,14 +91,14 @@ const DSFMAnalysis = () => {
         
         // Check if we have enough data (at least 2 stocks/sectors for correlation)
         if (data.length < 2) {
-          console.warn(`Only ${data.length} ${mode === "stock" ? "stocks" : "sectors"} loaded. Need at least 2 for correlation analysis.`);
+          console.warn(`Only ${data.length} stocks loaded. Need at least 2 for correlation analysis.`);
           setStockData([]);
           setCorrelationMatrix(null);
           setNetworkGraph(null);
           return;
         }
         
-        console.log(`Building correlation matrix for ${data.length} ${mode === "stock" ? "stocks" : "sectors"}`);
+        console.log(`Building correlation matrix for ${data.length} stocks`);
         setStockData(data);
         
         // Build correlation matrix
@@ -104,9 +106,15 @@ const DSFMAnalysis = () => {
         console.log(`Correlation matrix built: ${matrix.symbols.length} symbols`);
         setCorrelationMatrix(matrix);
         
-        // Build network graph
-        const graph = buildNetworkGraph(matrix, 0.5, sectorMap);
-        console.log(`Network graph built: ${graph.nodes.length} nodes, ${graph.edges.length} edges`);
+        // Build network graph with threshold mode
+        const graph = buildNetworkGraph(matrix, threshold, sectorMap, "threshold", 3);
+        console.log(`Network graph built: ${graph.nodes.length} nodes, ${graph.edges.length} edges (mode: threshold)`);
+        
+        // Show warning if graph is too sparse
+        if (graph.metadata?.warning) {
+          console.warn(graph.metadata.warning);
+        }
+        
         setNetworkGraph(graph);
       } catch (error) {
         console.error("Error loading data:", error);
@@ -120,46 +128,9 @@ const DSFMAnalysis = () => {
     };
 
     loadData();
-  }, [mode, dateRange, symbols, sectorMap, timeRange]);
+  }, [dateRange, symbols, sectorMap, timeRange, threshold]);
 
-  // Handle shock simulation
-  const handleShockSimulate = (symbol: string, magnitude: number): ShockSimulation | null => {
-    if (!correlationMatrix || !networkGraph) return null;
-    
-    try {
-      const simulation = simulateShock(symbol, magnitude, correlationMatrix, networkGraph);
-      setShockSimulation(simulation);
-      return simulation;
-    } catch (error) {
-      console.error("Error simulating shock:", error);
-      return null;
-    }
-  };
 
-  // Export data to CSV
-  const exportToCSV = () => {
-    if (!networkGraph) return;
-
-    const topNodes = getTopBridgeNodes(networkGraph, 20);
-    const csvContent = [
-      ["Rank", "Symbol", "Betweenness Centrality", "Degree Centrality", "Sector"].join(","),
-      ...topNodes.map((node, idx) => [
-        idx + 1,
-        node.label,
-        node.betweenness.toFixed(4),
-        node.degree,
-        node.sector || "N/A"
-      ].join(","))
-    ].join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `dsfm_analysis_${mode}_${timeRange}_${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -172,19 +143,12 @@ const DSFMAnalysis = () => {
                 Market Stability & Influence Analyzer
               </h1>
               <p className="text-sm text-gray-600 mt-1">
-                Network theory, correlation analysis, and shock simulation for market dynamics
+                Network theory, correlation analysis, and betweenness centrality for market dynamics
               </p>
             </div>
-            {networkGraph && (
-              <Button onClick={exportToCSV} variant="outline" size="sm">
-                <Download className="w-4 h-4 mr-2" />
-                Export CSV
-              </Button>
-            )}
           </div>
 
           <div className="flex flex-col gap-4">
-            <ModeToggle mode={mode} onModeChange={setMode} />
             <TimeRangeSelector
               selectedRange={timeRange}
               onRangeChange={setTimeRange}
@@ -195,6 +159,25 @@ const DSFMAnalysis = () => {
                 setCustomEndDate(end);
               }}
             />
+            <Card className="p-4 bg-gray-50 border-gray-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 mb-1">Edge Construction: Threshold</h3>
+                  <p className="text-xs text-gray-600">Correlation Threshold: {threshold.toFixed(2)}</p>
+                </div>
+                <div className="w-64">
+                  <input
+                    type="range"
+                    min="0.1"
+                    max="0.9"
+                    step="0.05"
+                    value={threshold}
+                    onChange={(e) => setThreshold(parseFloat(e.target.value))}
+                    className="w-full"
+                  />
+                </div>
+              </div>
+            </Card>
           </div>
         </div>
       </div>
@@ -208,13 +191,13 @@ const DSFMAnalysis = () => {
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
                 <div className="text-center">
                   <p className="text-sm font-medium mb-2">
-                    Loading {mode === "stock" ? "Stock-Level" : "Sector-Level"} Network Data
+                    Loading Stock-Level Network Data
                   </p>
                   <p className="text-xs text-gray-500 mb-2">
                     Time Range: {timeRange} ({formatDate(dateRange.start)} to {formatDate(dateRange.end)})
                   </p>
                   <p className="text-xs text-gray-500">
-                    Loading {loadingProgress.loaded} of {loadingProgress.total} {mode === "stock" ? "stocks" : "sectors"}...
+                    Loading {loadingProgress.loaded} of {loadingProgress.total} stocks...
                   </p>
                   {loadingProgress.total > 0 && (
                     <div className="w-full bg-gray-200 rounded-full h-2 mt-3 max-w-md">
@@ -232,15 +215,11 @@ const DSFMAnalysis = () => {
           </div>
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-            <TabsList className="grid w-full grid-cols-6">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="network">
-                {mode === "stock" ? "Stock Network" : "Sector Network"}
-              </TabsTrigger>
-              <TabsTrigger value="bridge">Bridge Finder</TabsTrigger>
-              <TabsTrigger value="shock">Shock Simulator</TabsTrigger>
-              <TabsTrigger value="insights">Insights</TabsTrigger>
-              <TabsTrigger value="validation">Validation</TabsTrigger>
+              <TabsTrigger value="bc-step-by-step">BC Step-by-Step</TabsTrigger>
+              <TabsTrigger value="shock-simulator">Shock Simulator</TabsTrigger>
+              <TabsTrigger value="hybrid-forecast">Hybrid Forecast</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="space-y-4">
@@ -254,13 +233,13 @@ const DSFMAnalysis = () => {
                       </h3>
                       <div className="text-xs text-blue-700 space-y-1">
                         <p>
-                          <span className="font-medium">Mode:</span> {mode === "stock" ? "Stock-Level Network (NIFTY50)" : "Sector-Level Network (NIFTY Sector Indices)"}
+                          <span className="font-medium">Mode:</span> Stock-Level Network (NIFTY50)
                         </p>
                         <p>
                           <span className="font-medium">Time Range:</span> {timeRange} - Analyzing data from {formatDate(dateRange.start)} to {formatDate(dateRange.end)}
                         </p>
                         <p>
-                          <span className="font-medium">Data Points:</span> {stockData.length} {mode === "stock" ? "stocks" : "sectors"} loaded with real-time historical prices
+                          <span className="font-medium">Data Points:</span> {stockData.length} stocks loaded with real-time historical prices
                         </p>
                         <p className="text-blue-600 font-medium mt-2">
                           ✓ Using real-time API data (not mock data)
@@ -271,73 +250,70 @@ const DSFMAnalysis = () => {
                 </Card>
               )}
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <Card className="p-4">
-                  <h3 className="text-sm font-semibold mb-2">Network Statistics</h3>
-                  {networkGraph ? (
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Total Nodes:</span>
-                        <span className="font-medium">{networkGraph.nodes.length}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Total Edges:</span>
-                        <span className="font-medium">{networkGraph.edges.length}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Avg Degree:</span>
-                        <span className="font-medium">
-                          {(networkGraph.edges.length * 2 / networkGraph.nodes.length).toFixed(2)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Time Range:</span>
-                        <span className="font-medium">{timeRange}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Data Source:</span>
-                        <span className="font-medium text-green-600">Real-Time API</span>
-                      </div>
+
+              {/* Network Metrics Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card className="p-4 bg-blue-50 border-blue-200">
+                  <h3 className="text-xs font-semibold text-blue-900 mb-1">Network Density</h3>
+                  {networkGraph?.metadata ? (
+                    <div className="text-2xl font-bold text-blue-700">
+                      {(networkGraph.metadata.density * 100).toFixed(1)}%
+                    </div>
+                  ) : networkGraph ? (
+                    <div className="text-2xl font-bold text-blue-700">
+                      {((2 * networkGraph.edges.length) / (networkGraph.nodes.length * (networkGraph.nodes.length - 1)) * 100).toFixed(1)}%
                     </div>
                   ) : (
                     <div className="text-sm text-gray-500">Loading...</div>
                   )}
+                  <p className="text-xs text-blue-600 mt-1">2E / (N×(N-1))</p>
                 </Card>
 
-                <Card className="p-4">
-                  <h3 className="text-sm font-semibold mb-2">Correlation Statistics</h3>
+                <Card className="p-4 bg-green-50 border-green-200">
+                  <h3 className="text-xs font-semibold text-green-900 mb-1">Avg Correlation</h3>
                   {correlationMatrix ? (
-                    <div className="space-y-2 text-sm">
+                    <div className="text-2xl font-bold text-green-700">
+                      {(
+                        correlationMatrix.matrix
+                          .flat()
+                          .filter((v, i) => {
+                            const row = Math.floor(i / correlationMatrix.symbols.length);
+                            const col = i % correlationMatrix.symbols.length;
+                            return row !== col;
+                          })
+                          .reduce((sum, val) => sum + Math.abs(val), 0) /
+                        (correlationMatrix.symbols.length * (correlationMatrix.symbols.length - 1))
+                      ).toFixed(3)}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-500">Loading...</div>
+                  )}
+                  <p className="text-xs text-green-600 mt-1">Mean absolute correlation</p>
+                </Card>
+
+                <Card className="p-4 bg-purple-50 border-purple-200">
+                  <h3 className="text-xs font-semibold text-purple-900 mb-1">Avg Shortest Path</h3>
+                  {networkGraph?.metadata ? (
+                    <div className="text-2xl font-bold text-purple-700">
+                      {networkGraph.metadata.avgShortestPath.toFixed(2)}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-500">Loading...</div>
+                  )}
+                  <p className="text-xs text-purple-600 mt-1">Mean path length</p>
+                </Card>
+
+                <Card className="p-4 bg-orange-50 border-orange-200">
+                  <h3 className="text-xs font-semibold text-orange-900 mb-1">Network Stats</h3>
+                  {networkGraph ? (
+                    <div className="space-y-1 text-xs">
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Avg Correlation:</span>
-                        <span className="font-medium">
-                          {(
-                            correlationMatrix.matrix
-                              .flat()
-                              .filter((v, i, arr) => {
-                                const row = Math.floor(i / correlationMatrix.symbols.length);
-                                const col = i % correlationMatrix.symbols.length;
-                                return row !== col;
-                              })
-                              .reduce((sum, val) => sum + Math.abs(val), 0) /
-                            (correlationMatrix.symbols.length * (correlationMatrix.symbols.length - 1))
-                          ).toFixed(3)}
-                        </span>
+                        <span className="text-orange-700">Nodes:</span>
+                        <span className="font-medium text-orange-900">{networkGraph.nodes.length}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Max Correlation:</span>
-                        <span className="font-medium">
-                          {Math.max(
-                            ...correlationMatrix.matrix
-                              .flat()
-                              .filter((v, i, arr) => {
-                                const row = Math.floor(i / correlationMatrix.symbols.length);
-                                const col = i % correlationMatrix.symbols.length;
-                                return row !== col;
-                              })
-                              .map(v => Math.abs(v))
-                          ).toFixed(3)}
-                        </span>
+                        <span className="text-orange-700">Edges:</span>
+                        <span className="font-medium text-orange-900">{networkGraph.edges.length}</span>
                       </div>
                     </div>
                   ) : (
@@ -347,7 +323,7 @@ const DSFMAnalysis = () => {
               </div>
 
               {networkGraph && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <>
                   <CentralityTable
                     nodes={networkGraph.nodes}
                     title="Top 10 Bridge Nodes"
@@ -356,59 +332,48 @@ const DSFMAnalysis = () => {
                   <CorrelationNetworkGraph
                     graph={networkGraph}
                     loading={loading}
-                    mode={mode}
+                    mode="stock"
+                    onNodeSelect={setSelectedNodeId}
+                    selectedNodeId={selectedNodeId}
+                  />
+                </>
+              )}
+
+              {/* Market Interpretation */}
+              {networkGraph && correlationMatrix && (
+                <div className="mt-6">
+                  <Step8MarketInterpretation 
+                    networkGraph={networkGraph}
+                    correlationMatrix={correlationMatrix}
+                    loading={loading} 
                   />
                 </div>
               )}
             </TabsContent>
 
-            <TabsContent value="network" className="space-y-4">
-              <CorrelationNetworkGraph
-                graph={networkGraph}
-                loading={loading}
-                mode={mode}
-              />
-            </TabsContent>
-
-            <TabsContent value="bridge" className="space-y-4">
-              {networkGraph && (
-                <CentralityTable
-                  nodes={networkGraph.nodes}
-                  title={`Top 20 Bridge ${mode === "stock" ? "Stocks" : "Sectors"}`}
-                  maxRows={20}
-                />
-              )}
-            </TabsContent>
-
-            <TabsContent value="shock" className="space-y-4">
-              {networkGraph && correlationMatrix && (
-                <ShockSimulator
-                  symbols={symbols}
-                  onSimulate={handleShockSimulate}
-                  networkGraph={networkGraph}
-                  sectorMap={sectorMap}
-                  mode={mode}
-                />
-              )}
-            </TabsContent>
-
-            <TabsContent value="insights" className="space-y-4">
-              <Insights
-                mode={mode}
-                networkGraph={networkGraph}
-                correlationMatrix={correlationMatrix}
-                shockSimulation={shockSimulation}
-                timeRange={timeRange}
-              />
-            </TabsContent>
-
-            <TabsContent value="validation" className="space-y-4">
-              <DataValidation
+            <TabsContent value="bc-step-by-step" className="space-y-4">
+              <BCStepByStep
                 stockData={stockData}
                 correlationMatrix={correlationMatrix}
                 networkGraph={networkGraph}
-                timeRange={timeRange}
+                sectorMap={sectorMap}
+                loading={loading}
               />
+            </TabsContent>
+
+            <TabsContent value="shock-simulator" className="space-y-4">
+              <ShockSimulator
+                networkGraph={networkGraph}
+                correlationMatrix={correlationMatrix}
+                stockData={stockData}
+                loading={loading}
+                threshold={threshold}
+                timeWindow={timeRange.toLowerCase()}
+              />
+            </TabsContent>
+
+            <TabsContent value="hybrid-forecast" className="space-y-4">
+              <HybridForecast stockData={stockData} />
             </TabsContent>
           </Tabs>
         )}

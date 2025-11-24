@@ -7,9 +7,17 @@ interface CorrelationNetworkGraphProps {
   graph: NetworkGraph | null;
   loading?: boolean;
   mode: "stock" | "sector";
+  onNodeSelect?: (nodeId: string | null) => void;
+  selectedNodeId?: string | null;
 }
 
-const CorrelationNetworkGraph = ({ graph, loading, mode }: CorrelationNetworkGraphProps) => {
+const CorrelationNetworkGraph = ({ 
+  graph, 
+  loading, 
+  mode, 
+  onNodeSelect,
+  selectedNodeId 
+}: CorrelationNetworkGraphProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const networkRef = useRef<any>(null);
 
@@ -26,13 +34,21 @@ const CorrelationNetworkGraph = ({ graph, loading, mode }: CorrelationNetworkGra
       }
 
       // Prepare nodes for vis-network
-      const nodes = graph.nodes.map((node) => ({
-        id: node.id,
-        label: node.label,
-        value: node.betweenness * 10 + 5, // Scale for visibility
-        color: getNodeColor(node.sector || "", mode),
-        title: `${node.label}\nBetweenness: ${node.betweenness.toFixed(2)}\nDegree: ${node.degree}`
-      }));
+      const nodes = graph.nodes.map((node) => {
+        const baseColor = getNodeColor(node.sector || "", mode);
+        const isSelected = node.id === selectedNodeId;
+        
+        return {
+          id: node.id,
+          label: node.label,
+          value: node.betweenness * 10 + 5, // Scale for visibility
+          color: isSelected 
+            ? { border: "#ef4444", background: baseColor, highlight: { border: "#ef4444" } }
+            : baseColor,
+          title: `${node.label}\nBetweenness: ${node.betweenness.toFixed(2)}\nDegree: ${node.degree}\nSector: ${node.sector || "N/A"}`,
+          borderWidth: isSelected ? 3 : 2
+        };
+      });
 
       // Prepare edges for vis-network
       const edges = graph.edges.map((edge) => ({
@@ -51,7 +67,13 @@ const CorrelationNetworkGraph = ({ graph, loading, mode }: CorrelationNetworkGra
         nodes: {
           shape: "dot",
           font: { size: 12, color: "#333" },
-          borderWidth: 2
+          borderWidth: 2,
+          chosen: {
+            node: (values: any) => {
+              values.borderWidth = 4;
+              values.borderColor = "#ef4444";
+            }
+          }
         },
         edges: {
           smooth: {
@@ -68,20 +90,35 @@ const CorrelationNetworkGraph = ({ graph, loading, mode }: CorrelationNetworkGra
         },
         interaction: {
           hover: true,
-          tooltipDelay: 100
+          tooltipDelay: 100,
+          selectConnectedEdges: false
         }
       };
 
       networkRef.current = new vis.Network(containerRef.current, data, options);
+      
+      // Handle node click
+      if (onNodeSelect) {
+        networkRef.current.on("click", (params: any) => {
+          if (params.nodes.length > 0) {
+            const nodeId = params.nodes[0];
+            // Toggle selection
+            onNodeSelect(nodeId === selectedNodeId ? null : nodeId);
+          } else {
+            onNodeSelect(null);
+          }
+        });
+      }
     });
 
     return () => {
       if (networkRef.current) {
+        networkRef.current.off("click");
         networkRef.current.destroy();
         networkRef.current = null;
       }
     };
-  }, [graph, mode, loading]);
+  }, [graph, mode, loading, selectedNodeId, onNodeSelect]);
 
   if (loading) {
     return (
@@ -107,9 +144,12 @@ const CorrelationNetworkGraph = ({ graph, loading, mode }: CorrelationNetworkGra
         <h3 className="text-sm font-semibold mb-1">
           {mode === "stock" ? "Stock-Level Network" : "Sector-Level Network"}
         </h3>
-        <p className="text-xs text-gray-500">
-          Node size = Betweenness Centrality | Edge thickness = Correlation strength
-        </p>
+        <div className="text-xs text-gray-500 space-y-0.5">
+          <p>• Node size = Betweenness Centrality</p>
+          <p>• Edge thickness = Correlation strength</p>
+          <p>• Node color = Sector</p>
+          <p>• Click node to view bridge paths</p>
+        </div>
       </div>
       <div ref={containerRef} className="h-[500px] border rounded-md" />
     </Card>
