@@ -50,19 +50,24 @@ const BuyDialog = ({ open, onOpenChange, symbol, companyName, currentPrice, pric
     const avgPrice = effectivePrice;
     const investedAmount = shares * avgPrice;
 
-    // Deduct balance if sufficient
-    if (deductBalance(investedAmount)) {
-      addHolding({
-        symbol,
-        companyName,
-        shares,
-        avgPrice,
-        investedAmount,
-      });
+    // Check balance before deducting
+    if (balance >= investedAmount) {
+      // Deduct balance
+      if (deductBalance(investedAmount)) {
+        addHolding({
+          symbol,
+          companyName,
+          shares,
+          avgPrice,
+          investedAmount,
+        });
 
-      toast.success(`Successfully bought ${shares} shares of ${companyName}`);
-      onOpenChange(false);
-      setQuantity("");
+        toast.success(`Successfully bought ${shares} shares of ${companyName}`);
+        onOpenChange(false);
+        setQuantity("");
+      } else {
+        toast.error("Failed to process transaction");
+      }
     } else {
       // Show error - insufficient balance
       toast.error(`Insufficient balance. Required: ₹${investedAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);

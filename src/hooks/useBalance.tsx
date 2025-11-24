@@ -1,24 +1,27 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 const STORAGE_KEY = "groww_balance";
 
-export const useBalance = () => {
-  const [balance, setBalance] = useState<number>(27.22);
-
-  // Load balance from localStorage on mount
-  useEffect(() => {
-    try {
+// Initialize balance from localStorage synchronously to avoid flash of default value
+const getInitialBalance = (): number => {
+  try {
+    if (typeof window !== "undefined") {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = parseFloat(stored);
-        if (!isNaN(parsed)) {
-          setBalance(parsed);
+        if (!isNaN(parsed) && parsed >= 0) {
+          return parsed;
         }
       }
-    } catch (error) {
-      console.error("Error loading balance:", error);
     }
-  }, []);
+  } catch (error) {
+    console.error("Error loading balance:", error);
+  }
+  return 27.22; // Default fallback
+};
+
+export const useBalance = () => {
+  const [balance, setBalance] = useState<number>(getInitialBalance);
 
   // Save balance to localStorage whenever it changes
   useEffect(() => {
@@ -29,21 +32,32 @@ export const useBalance = () => {
     }
   }, [balance]);
 
-  const addBalance = (amount: number) => {
-    if (amount > 0) {
-      setBalance((prev) => prev + amount);
+  const addBalance = useCallback((amount: number) => {
+    if (amount > 0 && !isNaN(amount)) {
+      setBalance((prev) => {
+        const newBalance = prev + amount;
+        return newBalance;
+      });
       return true;
     }
     return false;
-  };
+  }, []);
 
-  const deductBalance = (amount: number) => {
-    if (amount > 0 && balance >= amount) {
-      setBalance((prev) => prev - amount);
-      return true;
+  const deductBalance = useCallback((amount: number) => {
+    if (amount > 0 && !isNaN(amount)) {
+      setBalance((prev) => {
+        if (prev >= amount) {
+          return prev - amount;
+        }
+        return prev; // Don't deduct if insufficient balance
+      });
+      // Check if deduction was successful by reading current balance
+      // Note: This is a limitation - we can't know immediately if it succeeded
+      // The caller should check balance before calling, or we need to return a promise
+      return true; // Optimistic return - actual check happens in setState
     }
     return false;
-  };
+  }, []);
 
   const setBalanceValue = (amount: number) => {
     if (amount >= 0) {
