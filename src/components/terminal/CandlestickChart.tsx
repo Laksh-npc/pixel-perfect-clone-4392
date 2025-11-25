@@ -27,8 +27,6 @@ const timeframes = [
   { label: "5Y", value: "5y" },
   { label: "1Y", value: "1y" },
   { label: "3M", value: "3m" },
-  { label: "1M", value: "1m" },
-  { label: "5D", value: "5d" },
 ];
 
 // Custom Cursor - Returns SVG props for vertical line matching Groww
@@ -261,7 +259,7 @@ VolumeBarShape.displayName = "VolumeBarShape";
 
 const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartProps) => {
   const { theme } = useTheme();
-  const [selectedPeriod, setSelectedPeriod] = useState("5d");
+  const [selectedPeriod, setSelectedPeriod] = useState("3m");
   const [chartData, setChartData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -573,74 +571,6 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
             console.warn("Intraday data not available:", intradayError?.message);
           }
             startDate.setDate(startDate.getDate() - 1);
-          break;
-        case "5d":
-          try {
-            const intradayData = await api.getStockIntradayData(symbol);
-            const graphDataArray = intradayData?.graphData || intradayData?.grapthData;
-            
-            if (graphDataArray && Array.isArray(graphDataArray) && graphDataArray.length > 0) {
-              // Group into 5-minute intervals for candlesticks
-              const grouped: { [key: number]: any } = {};
-              
-              graphDataArray.forEach((dataPoint: any) => {
-                let timestamp: number;
-                let price: number;
-                let volume: number = 0;
-                
-                if (Array.isArray(dataPoint)) {
-                  [timestamp, price] = dataPoint;
-                } else if (dataPoint.timestamp && dataPoint.price) {
-                  timestamp = dataPoint.timestamp;
-                  price = dataPoint.price;
-                  volume = dataPoint.volume || 0;
-                } else {
-                  return;
-                }
-                
-                if (!timestamp || !price || price <= 0) return;
-                
-                const date = new Date(timestamp);
-                const minutes = date.getMinutes();
-                const roundedMinutes = Math.floor(minutes / 5) * 5;
-                const groupKey = new Date(date);
-                groupKey.setMinutes(roundedMinutes, 0, 0);
-                const key = groupKey.getTime();
-
-                if (!grouped[key]) {
-                  grouped[key] = {
-                    date: key,
-                    open: price,
-                    high: price,
-                    low: price,
-                    close: price,
-                    volume: volume,
-                    timeframe: selectedPeriod,
-                  };
-                } else {
-                  grouped[key].high = Math.max(grouped[key].high, price);
-                  grouped[key].low = Math.min(grouped[key].low, price);
-                  grouped[key].close = price;
-                  grouped[key].volume += volume;
-                }
-              });
-
-              formatted = Object.values(grouped)
-                .sort((a: any, b: any) => a.date - b.date);
-
-              if (formatted.length > 0) {
-                setChartData(formatted);
-                setLoading(false);
-                return;
-              }
-            }
-          } catch (intradayError: any) {
-            console.warn("Intraday data not available:", intradayError?.message);
-          }
-          startDate.setDate(startDate.getDate() - 5);
-          break;
-        case "1m":
-          startDate.setMonth(startDate.getMonth() - 1);
           break;
         case "3m":
           startDate.setMonth(startDate.getMonth() - 3);
@@ -1028,7 +958,7 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
               </button>
             </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-              <span className="font-medium">{selectedPeriod === '1d' ? '5m' : selectedPeriod === '5d' ? '1d' : selectedPeriod}</span>
+              <span className="font-medium">{selectedPeriod === '1d' ? '5m' : selectedPeriod}</span>
               <span>·</span>
               <span>{info.symbol || symbol}</span>
               <span>·</span>
@@ -1060,7 +990,7 @@ const CandlestickChartComponent = ({ symbol, stockDetails }: CandlestickChartPro
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-foreground font-semibold">{info.symbol || symbol}</span>
               <span className="text-muted-foreground">·</span>
-              <span className="text-muted-foreground">{selectedPeriod === '1d' ? '5' : selectedPeriod === '5d' ? '1' : '60'}</span>
+              <span className="text-muted-foreground">{selectedPeriod === '1d' ? '5' : '60'}</span>
               <span className="text-muted-foreground">·</span>
               <span className="text-muted-foreground">NSE</span>
               <span className="text-muted-foreground ml-2">O<span className="ml-1 font-semibold text-foreground">{displayData.open?.toFixed(2) || open.toFixed(2)}</span></span>
