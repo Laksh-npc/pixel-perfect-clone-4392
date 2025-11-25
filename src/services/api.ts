@@ -305,7 +305,13 @@ export const api = {
 
   // Get stock trade info (volume, market depth, etc.)
   getStockTradeInfo: async (symbol: string) => {
-    return api.fetchFromRest<any>(`/api/equity/tradeInfo/${encodeURIComponent(symbol)}`);
+    try {
+      return await api.fetchFromRest<any>(`/api/equity/tradeInfo/${encodeURIComponent(symbol)}`, { silent: true });
+    } catch (error: any) {
+      // Return null for all errors - backend may be unavailable or symbol invalid
+      // This prevents console spam and allows graceful degradation
+      return null;
+    }
   },
 
   // Get stock corporate info (financials, announcements)
